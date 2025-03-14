@@ -1,0 +1,79 @@
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    background-color: #333;
+}
+
+.intersection {
+    position: relative;
+    width: 400px;
+    height: 400px;
+    background-color: #444;
+}
+
+.traffic-light {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: #222;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.traffic-light .light {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    margin: 5px;
+    background-color: #555;
+}
+
+.traffic-light .red { background-color: red; }
+.traffic-light .yellow { background-color: yellow; }
+.traffic-light .green { background-color: green; }
+
+/* Posicionamiento de los semáforos */
+#tl1 { top: 10px; left: 50%; transform: translateX(-50%); } /* Arriba */
+#tl2 { bottom: 10px; left: 50%; transform: translateX(-50%); } /* Abajo */
+#tl3 { left: 10px; top: 50%; transform: translateY(-50%); } /* Izquierda */
+#tl4 { right: 10px; top: 50%; transform: translateY(-50%); } /* Derecha */
+
+.street {
+    position: absolute;
+    background-color: #555;
+}
+
+.horizontal {
+    width: 100%;
+    height: 40px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.vertical {
+    width: 40px;
+    height: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.lane {
+    position: relative;
+    width: 100%;
+    height: 20px;
+    background-color: #666;
+    margin: 10px 0;
+}
+
+.car {
+    width: 20px;
+    height: 20px;
+    background-color: blue;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
