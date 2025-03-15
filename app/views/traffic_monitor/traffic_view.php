@@ -352,20 +352,20 @@
     <div class="crosswalk vertical right-bottom"></div>
     
     <!-- Semáforos -->
-    <!-- Semáforo para dirección derecha (ahora en la posición inferior) -->
+    <!-- Semáforo para dirección derecha -->
     <div id="semaphore-right-post" class="semaphore-post"></div>
     <div id="semaphore-right-housing" class="semaphore-housing">
-      <div id="semaphore-right-red" class="semaphore-light red"></div>
+      <div id="semaphore-right-red" class="semaphore-light red "></div>
       <div id="semaphore-right-yellow" class="semaphore-light yellow"></div>
       <div id="semaphore-right-green" class="semaphore-light green active"></div>
     </div>
     
-    <!-- Semáforo para dirección izquierda (ahora en la posición superior) -->
+    <!-- Semáforo para dirección izquierda -->
     <div id="semaphore-left-post" class="semaphore-post"></div>
     <div id="semaphore-left-housing" class="semaphore-housing">
-      <div id="semaphore-left-red" class="semaphore-light red"></div>
+      <div id="semaphore-left-red" class="semaphore-light red active"></div>
       <div id="semaphore-left-yellow" class="semaphore-light yellow"></div>
-      <div id="semaphore-left-green" class="semaphore-light green active"></div>
+      <div id="semaphore-left-green" class="semaphore-light green"></div>
     </div>
     
     <!-- Semáforo para dirección abajo -->
@@ -394,7 +394,7 @@
   <script>
     // Configuración de la simulación
     const container = document.querySelector('.container');
-    const safeDistance = 30; // Distancia mínima entre vehículos
+    const safeDistance = 15; // Distancia mínima entre vehículos
     const baseSpeed = 2;     // Velocidad base en píxeles por frame
     const decelerationRate = 0.3; // Tasa de desaceleración
     const accelerationRate = 0.1; // Tasa de aceleración
@@ -414,47 +414,96 @@
     const GREEN = 'green';
     
     // Fases de semáforo con tiempos para cada estado
-    const phases = {
-      horizontal: {
-        duration: 5000,
-        states: {
-          right: GREEN,
-          left: GREEN,
-          down: RED,
-          up: RED
-        }
-      },
-      yellowToVertical: {
-        duration: 1500,
-        states: {
-          right: YELLOW,
-          left: YELLOW,
-          down: RED,
-          up: RED
-        }
-      },
-      vertical: {
-        duration: 5000,
-        states: {
-          right: RED,
-          left: RED,
-          down: GREEN,
-          up: GREEN
-        }
-      },
-      yellowToHorizontal: {
-        duration: 1500,
-        states: {
-          right: RED,
-          left: RED,
-          down: YELLOW,
-          up: YELLOW
-        }
-      }
-    };
+    // Fases de semáforo con tiempos para cada estado (uno en verde a la vez)
+const phases = {
+  rightGreen: {
+    duration: 10000, 
+    states: {
+      right: GREEN,
+      left: RED,
+      down: RED,
+      up: RED,
+    },
+  },
+  rightYellow: {
+    duration: 2000, 
+    states: {
+      right: YELLOW,
+      left: RED,
+      down: RED,
+      up: RED,
+    },
+  },
+  leftGreen: {
+    duration: 10000, 
+    states: {
+      right: RED,
+      left: GREEN,
+      down: RED,
+      up: RED,
+    },
+  },
+  leftYellow: {
+    duration: 2000, 
+    states: {
+      right: RED,
+      left: YELLOW,
+      down: RED,
+      up: RED,
+    },
+  },
+  downGreen: {
+    duration: 10000, 
+    states: {
+      right: RED,
+      left: RED,
+      down: GREEN,
+      up: RED,
+    },
+  },
+  downYellow: {
+    duration: 2000, 
+    states: {
+      right: RED,
+      left: RED,
+      down: YELLOW,
+      up: RED,
+    },
+  },
+  upGreen: {
+    duration: 10000, 
+    states: {
+      right: RED,
+      left: RED,
+      down: RED,
+      up: GREEN,
+    },
+  },
+  upYellow: {
+    duration: 1500, // 1.5s en amarillo antes de reiniciar
+    states: {
+      right: RED,
+      left: RED,
+      down: RED,
+      up: YELLOW,
+    },
+  },
+};
+
+// Definir el orden de las fases
+const phaseSequence = [
+  "rightGreen",
+  "rightYellow",
+  "leftGreen",
+  "leftYellow",
+  "downGreen",
+  "downYellow",
+  "upGreen",
+  "upYellow",
+];
 
     let currentPhaseIndex = 0;
-const phaseSequence = ['horizontal', 'yellowToVertical', 'vertical', 'yellowToHorizontal'];
+//const phaseSequence = ['horizontal', 'yellowToVertical', 'vertical', 'yellowToHorizontal'];
 let currentPhase = phaseSequence[currentPhaseIndex];
 
 const semaphores = {
@@ -493,8 +542,9 @@ function updateSemaphores() {
   const phaseConfig = phases[currentPhase];
   
   for (const direction in phaseConfig.states) {
+    console.log('Direction '+ direction);
     const state = phaseConfig.states[direction];
-    
+    console.log( 'State '+state);
     // Resetear todas las luces
     semaphores[direction].red.classList.remove('active');
     semaphores[direction].yellow.classList.remove('active');
@@ -515,8 +565,10 @@ function advancePhase() {
   setTimeout(advancePhase, phases[currentPhase].duration);
 }
 
+
+
 // Iniciar ciclo de semáforos
-setTimeout(advancePhase, phases[currentPhase].duration);
+//setTimeout(advancePhase, phases[currentPhase].duration);
 
 // Clase para representar un vehículo
 class Vehicle {
@@ -559,7 +611,6 @@ class Vehicle {
     container.appendChild(this.element);
     
     // Posición inicial y orientación según el carril
-    // Cambiamos las posiciones para que left esté arriba y right abajo
     if (lane === 'right') {
       this.x = -50;
       this.y = 440; // Ajustado para estar en el carril inferior
@@ -628,8 +679,8 @@ class Vehicle {
     // Solo puede girar si está en la intersección y el semáforo está en verde
     return (
       inPosition && 
-      this.isInIntersection() && 
-      phases[currentPhase].states[this.lane] === GREEN
+      this.isInIntersection() 
+      //&& hases[currentPhase].states[this.lane] === GREEN 
     );
   }
   
@@ -770,22 +821,30 @@ class Vehicle {
   
   // Verificar si debería detenerse por el semáforo
   shouldStopForTrafficLight() {
-    // Solo se detiene si el semáforo está en rojo o amarillo
-    const currentLightState = phases[currentPhase].states[this.lane];
-    
-    if (currentLightState === RED || currentLightState === YELLOW) {
-      if (this.lane === 'right') {
-        return this.x + this.width < this.stopLine;
-      } else if (this.lane === 'left') {
-        return this.x > this.stopLine;
-      } else if (this.lane === 'down') {
-        return this.y + this.height < this.stopLine;
-      } else if (this.lane === 'up') {
-        return this.y > this.stopLine;
-      }
+  // Solo se evalúa si el semáforo está en rojo o amarillo
+  // Si el vehículo está girando, omitir la verificación de semáforo.
+  if (this.turning || this.turnProgress==1) return false;
+  const currentLightState = phases[currentPhase].states[this.lane];
+  const tolerance = 10; // Rango de tolerancia en píxeles alrededor de la línea de stop
+  
+  if (currentLightState === RED || currentLightState === YELLOW) {
+    if (this.lane === 'right') {
+      // El vehículo debe estar muy cerca de la línea (entre stopLine - tolerance y stopLine + tolerance)
+      return (this.x + this.width >= this.stopLine - tolerance &&
+              this.x + this.width <= this.stopLine + tolerance);
+    } else if (this.lane === 'left') {
+      return (this.x <= this.stopLine + tolerance &&
+              this.x >= this.stopLine - tolerance);
+    } else if (this.lane === 'down') {
+      return (this.y + this.height >= this.stopLine - tolerance &&
+              this.y + this.height <= this.stopLine + tolerance);
+    } else if (this.lane === 'up') {
+      return (this.y <= this.stopLine + tolerance &&
+              this.y >= this.stopLine - tolerance);
     }
-    return false;
   }
+  return false;
+}
   
   // Actualizar posición y comportamiento
   update(obstacles) {
