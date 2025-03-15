@@ -1,3 +1,11 @@
+<?php
+  session_start();
+  if (!isset($_SESSION['usuario'])) {
+    header('Location: ../../views/login/login.php');
+  }
+
+?>
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -389,6 +397,9 @@
     <button id="btn-increase-traffic">Aumentar Tráfico</button>
     <button id="btn-decrease-traffic">Disminuir Tráfico</button>
     <button id="btn-toggle-sim">Pausar Simulación</button>
+    <input type="file" id="jsonInput" accept="application/json">
+    <button id="loadJsonBtn">Empezar Simulacion</button>
+    <button id="toggleModeBtn">Modo Automático</button>
   </div>
   
   <script>
@@ -542,9 +553,9 @@ function updateSemaphores() {
   const phaseConfig = phases[currentPhase];
   
   for (const direction in phaseConfig.states) {
-    console.log('Direction '+ direction);
+    //console.log('Direction '+ direction);
     const state = phaseConfig.states[direction];
-    console.log( 'State '+state);
+    //console.log( 'State '+state);
     // Resetear todas las luces
     semaphores[direction].red.classList.remove('active');
     semaphores[direction].yellow.classList.remove('active');
@@ -973,8 +984,14 @@ function updateSpawnTimers() {
   startSpawnTimers();
 }
 
+function stopSpawnTimers() {
+  for (const timer in spawnTimers) {
+    clearInterval(spawnTimers[timer]);
+  }
+  spawnTimers = {};
+}
 // Iniciar temporizadores de generación
-startSpawnTimers();
+//startSpawnTimers();
 
 // Función de animación para actualizar la simulación
 function animate() {
@@ -1024,7 +1041,115 @@ btnToggleSim.addEventListener('click', () => {
   }
 });
 
-// Iniciar ciclo de semáforos
-updateSemaphores();
-setTimeout(advancePhase, phases[currentPhase].duration);
+function determineLane(origen, destino) {
+  // Ejemplos básicos según tu especificación:
+  if (origen === "a" && destino === "b") return "right";
+  if (origen === "a" && destino === "c") return "right";
+  if (origen === "a" && destino === "d") return "right";
+
+  if (origen === "b" && destino === "a") return "left";
+  if (origen === "b" && destino === "c") return "left";
+  if (origen === "b" && destino === "d") return "left";
+
+  if (origen === "c" && destino === "d") return "down";
+  if (origen === "c" && destino === "a") return "down";
+  if (origen === "c" && destino === "b") return "down";
+
+  if (origen === "d" && destino === "c") return "up";
+  if (origen === "d" && destino === "a") return "up";
+  if (origen === "d" && destino === "b") return "up";
+  
+  // Para combinaciones (por ejemplo: a->c, etc.) se puede extender esta lógica
+  return "right"; // Valor por defecto
+}
+
+// Variables para guardar los vehículos a spawnear de cada carril
+let jsonVehiclesByLane = {
+  right: [],
+  left: [],
+  down: [],
+  up: []
+};
+
+function processJsonVehicles(jsonData) {
+  jsonData.datos_vehiculo_prueba.forEach(data => {
+    const lane = determineLane(data.origen, data.destino);
+    jsonVehiclesByLane[lane].push(data);
+  });
+}
+
+// Función para spawnear un vehículo desde el JSON para un carril dado
+function spawnVehicleFromJson(lane) {
+  if (jsonVehiclesByLane[lane].length === 0) {
+    // Si ya no hay vehículos pendientes en este carril, detener el temporizador
+    clearInterval(spawnTimers[lane]);
+    return;
+  }
+  const data = jsonVehiclesByLane[lane].shift(); // Obtener el siguiente vehículo
+  let vehicle = new Vehicle(lane);
+  // Ajustar propiedades del vehículo según los datos del JSON
+  vehicle.maxSpeed = data.velocidad; // Por ejemplo, ajustar la velocidad
+  //vehicle.marca = data.marca;     // Guardar la marca (opcional)
+  // Puedes asignar otras propiedades según sea necesario
+  
+  vehicles.push(vehicle);
+}
+
+
+// Función para iniciar los temporizadores de spawneo para cada carril (modo JSON)
+function startJsonSpawnTimers() {
+  spawnTimers.right = setInterval(() => spawnVehicleFromJson('right'), spawnRate.right);
+  spawnTimers.left = setInterval(() => spawnVehicleFromJson('left'), spawnRate.left);
+  spawnTimers.down = setInterval(() => spawnVehicleFromJson('down'), spawnRate.down);
+  spawnTimers.up = setInterval(() => spawnVehicleFromJson('up'), spawnRate.up);
+}
+
+// Variable para almacenar el modo actual: true = modo manual (JSON), false = modo automático
+let manualMode = false;
+
+// Evento para cargar el JSON
+document.getElementById("loadJsonBtn").addEventListener("click", () => {
+  const input = document.getElementById("jsonInput");
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const jsonData = JSON.parse(e.target.result);
+        manualMode = true;
+        // Detener la generación automática si está activa
+        stopSpawnTimers();
+        // Procesar los vehículos del JSON y agruparlos por carril
+        processJsonVehicles(jsonData);
+        // Iniciar los temporizadores de spawneo para el modo manual
+        startJsonSpawnTimers();
+        updateSemaphores();
+        setTimeout(advancePhase, phases[currentPhase].duration);
+        // Cambiar el texto del botón de modo
+        document.getElementById("toggleModeBtn").textContent = "Cambiar a Modo Automático";
+      } catch (error) {
+        console.error("Error al parsear JSON", error);
+      }
+    };
+    reader.readAsText(input.files[0]);
+  }
+});
+
+// Evento para alternar entre modo manual y automático
+document.getElementById("toggleModeBtn").addEventListener("click", () => {
+  //manualMode = !manualMode;
+  if (!manualMode) {
+    stopSpawnTimers();
+    startSpawnTimers();
+    updateSemaphores();
+    setTimeout(advancePhase, phases[currentPhase].duration);
+    // Además, puedes limpiar los vehículos cargados manualmente si lo deseas.
+    document.getElementById("toggleModeBtn").textContent = "Cambiar a Modo Manual";
+  } else {
+
+  }
+});
+//startSpawnTimers();
+//updateSemaphores();
+//setTimeout(advancePhase, phases[currentPhase].duration);
+
   </script>
