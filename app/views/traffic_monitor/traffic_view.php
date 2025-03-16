@@ -19,11 +19,55 @@
       background: #f0f0f0;
       font-family: Arial, sans-serif;
     }
+    .main-container {
+      display: flex;
+      width: 1050px;
+      margin: 20px auto;
+    }
+    .left-panel {
+      width: 240px;
+      background: #fff;
+      border-radius: 4px;
+      margin-right: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      padding: 15px;
+    }
+    .left-panel h3 {
+      margin-top: 0;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 8px;
+      color: #444;
+    }
+    .time-input-group {
+      margin-bottom: 15px;
+    }
+    .time-input-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+      color: #555;
+    }
+    .input-pair {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .input-pair label {
+      display: block;
+      font-weight: normal;
+      font-size: 0.9em;
+      margin-bottom: 3px;
+    }
+    .input-pair input {
+      width: 60px;
+      padding: 5px;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+    }
     .container {
       position: relative;
       width: 800px;
       height: 800px;
-      margin: 20px auto;
       background: #444;
       overflow: hidden;
       box-shadow: 0 0 20px rgba(0,0,0,0.3);
@@ -40,13 +84,15 @@
     }
     button {
       padding: 8px 16px;
-      margin: 0 5px;
+      margin: 8px 0;
       border: none;
       border-radius: 4px;
       background: #3498db;
       color: white;
       cursor: pointer;
       transition: background 0.3s;
+      display: block;
+      width: 100%;
     }
     button:hover {
       background: #2980b9;
@@ -328,78 +374,143 @@
   </style>
 </head>
 <body>
-  <div class="container">
-    <!-- Vías -->
-    <div class="road-horizontal"></div>
-    <div class="road-vertical"></div>
-    
-    <!-- Aceras -->
-    <div class="sidewalk top"></div>
-    <div class="sidewalk bottom"></div>
-    <div class="sidewalk left"></div>
-    <div class="sidewalk right"></div>
-    
-    <!-- Divisores de carriles -->
-    <div class="divider horizontal dashed"></div>
-    <div class="divider vertical dashed"></div>
-    
-    <!-- Líneas de detención -->
-    <div class="stop-line right"></div>
-    <div class="stop-line left"></div>
-    <div class="stop-line down"></div>
-    <div class="stop-line up"></div>
-    
-    <!-- Pasos de peatones -->
-    <div class="crosswalk horizontal top-left"></div>
-    <div class="crosswalk horizontal top-right"></div>
-    <div class="crosswalk horizontal bottom-left"></div>
-    <div class="crosswalk horizontal bottom-right"></div>
-    <div class="crosswalk vertical left-top"></div>
-    <div class="crosswalk vertical left-bottom"></div>
-    <div class="crosswalk vertical right-top"></div>
-    <div class="crosswalk vertical right-bottom"></div>
-    
-    <!-- Semáforos -->
-    <!-- Semáforo para dirección derecha -->
-    <div id="semaphore-right-post" class="semaphore-post"></div>
-    <div id="semaphore-right-housing" class="semaphore-housing">
-      <div id="semaphore-right-red" class="semaphore-light red "></div>
-      <div id="semaphore-right-yellow" class="semaphore-light yellow"></div>
-      <div id="semaphore-right-green" class="semaphore-light green active"></div>
+  <div class="main-container">
+    <!-- Panel izquierdo para controles -->
+    <div class="left-panel">
+      <h3>Configuración de Semáforos</h3>
+      
+      <div class="time-input-group">
+        <label>Semáforo Derecho:</label>
+        <div class="input-pair">
+          <div>
+            <label>Verde (s):</label>
+            <input type="number" id="right-green" value="10" min="1">
+          </div>
+          <div>
+            <label>Amarillo (s):</label>
+            <input type="number" id="right-yellow" value="2" min="1">
+          </div>
+        </div>
+      </div>
+      
+      <div class="time-input-group">
+        <label>Semáforo Izquierdo:</label>
+        <div class="input-pair">
+          <div>
+            <label>Verde (s):</label>
+            <input type="number" id="left-green" value="10" min="1">
+          </div>
+          <div>
+            <label>Amarillo (s):</label>
+            <input type="number" id="left-yellow" value="2" min="1">
+          </div>
+        </div>
+      </div>
+      
+      <div class="time-input-group">
+        <label>Semáforo Abajo:</label>
+        <div class="input-pair">
+          <div>
+            <label>Verde (s):</label>
+            <input type="number" id="down-green" value="10" min="1">
+          </div>
+          <div>
+            <label>Amarillo (s):</label>
+            <input type="number" id="down-yellow" value="2" min="1">
+          </div>
+        </div>
+      </div>
+      
+      <div class="time-input-group">
+        <label>Semáforo Arriba:</label>
+        <div class="input-pair">
+          <div>
+            <label>Verde (s):</label>
+            <input type="number" id="up-green" value="10" min="1">
+          </div>
+          <div>
+            <label>Amarillo (s):</label>
+            <input type="number" id="up-yellow" value="1.5" min="1">
+          </div>
+        </div>
+      </div>
+      
+      <button id="apply-times">Aplicar Tiempos</button>
+      <button id="btn-toggle-sim">Pausar Simulación</button>
+      
+      
+      <div style="margin-top: 20px;">
+        <label>Cargar Simulación:</label>
+        <input type="file" id="jsonInput" accept="application/json" style="margin: 10px 0;">
+        <button id="loadJsonBtn">Simulación Manual</button>
+        <button id="toggleModeBtn">Simulacion Automática</button>
+      </div>
     </div>
     
-    <!-- Semáforo para dirección izquierda -->
-    <div id="semaphore-left-post" class="semaphore-post"></div>
-    <div id="semaphore-left-housing" class="semaphore-housing">
-      <div id="semaphore-left-red" class="semaphore-light red active"></div>
-      <div id="semaphore-left-yellow" class="semaphore-light yellow"></div>
-      <div id="semaphore-left-green" class="semaphore-light green"></div>
+    <!-- Contenedor de la simulación -->
+    <div class="container">
+      <!-- Vías -->
+      <div class="road-horizontal"></div>
+      <div class="road-vertical"></div>
+      
+      <!-- Aceras -->
+      <div class="sidewalk top"></div>
+      <div class="sidewalk bottom"></div>
+      <div class="sidewalk left"></div>
+      <div class="sidewalk right"></div>
+      
+      <!-- Divisores de carriles -->
+      <div class="divider horizontal dashed"></div>
+      <div class="divider vertical dashed"></div>
+      
+      <!-- Líneas de detención -->
+      <div class="stop-line right"></div>
+      <div class="stop-line left"></div>
+      <div class="stop-line down"></div>
+      <div class="stop-line up"></div>
+      
+      <!-- Pasos de peatones -->
+      <div class="crosswalk horizontal top-left"></div>
+      <div class="crosswalk horizontal top-right"></div>
+      <div class="crosswalk horizontal bottom-left"></div>
+      <div class="crosswalk horizontal bottom-right"></div>
+      <div class="crosswalk vertical left-top"></div>
+      <div class="crosswalk vertical left-bottom"></div>
+      <div class="crosswalk vertical right-top"></div>
+      <div class="crosswalk vertical right-bottom"></div>
+      <!-- Semáforos -->
+      <!-- Semáforo para dirección derecha -->
+      <div id="semaphore-right-post" class="semaphore-post"></div>
+      <div id="semaphore-right-housing" class="semaphore-housing">
+        <div id="semaphore-right-red" class="semaphore-light red"></div>
+        <div id="semaphore-right-yellow" class="semaphore-light yellow"></div>
+        <div id="semaphore-right-green" class="semaphore-light green active"></div>
+      </div>
+      
+      <!-- Semáforo para dirección izquierda -->
+      <div id="semaphore-left-post" class="semaphore-post"></div>
+      <div id="semaphore-left-housing" class="semaphore-housing">
+        <div id="semaphore-left-red" class="semaphore-light red active"></div>
+        <div id="semaphore-left-yellow" class="semaphore-light yellow"></div>
+        <div id="semaphore-left-green" class="semaphore-light green"></div>
+      </div>
+      
+      <!-- Semáforo para dirección abajo -->
+      <div id="semaphore-down-post" class="semaphore-post"></div>
+      <div id="semaphore-down-housing" class="semaphore-housing">
+        <div id="semaphore-down-red" class="semaphore-light red active"></div>
+        <div id="semaphore-down-yellow" class="semaphore-light yellow"></div>
+        <div id="semaphore-down-green" class="semaphore-light green"></div>
+      </div>
+      
+      <!-- Semáforo para dirección arriba -->
+      <div id="semaphore-up-post" class="semaphore-post"></div>
+      <div id="semaphore-up-housing" class="semaphore-housing">
+        <div id="semaphore-up-red" class="semaphore-light red active"></div>
+        <div id="semaphore-up-yellow" class="semaphore-light yellow"></div>
+        <div id="semaphore-up-green" class="semaphore-light green"></div>
+      </div>
     </div>
-    
-    <!-- Semáforo para dirección abajo -->
-    <div id="semaphore-down-post" class="semaphore-post"></div>
-    <div id="semaphore-down-housing" class="semaphore-housing">
-      <div id="semaphore-down-red" class="semaphore-light red active"></div>
-      <div id="semaphore-down-yellow" class="semaphore-light yellow"></div>
-      <div id="semaphore-down-green" class="semaphore-light green"></div>
-    </div>
-    
-    <!-- Semáforo para dirección arriba -->
-    <div id="semaphore-up-post" class="semaphore-post"></div>
-    <div id="semaphore-up-housing" class="semaphore-housing">
-      <div id="semaphore-up-red" class="semaphore-light red active"></div>
-      <div id="semaphore-up-yellow" class="semaphore-light yellow"></div>
-      <div id="semaphore-up-green" class="semaphore-light green"></div>
-    </div>
-  </div>
-  
-  <div class="controls">
-    <button id="btn-increase-traffic">Aumentar Tráfico</button>
-    <button id="btn-decrease-traffic">Disminuir Tráfico</button>
-    <button id="btn-toggle-sim">Pausar Simulación</button>
-    <input type="file" id="jsonInput" accept="application/json">
-    <button id="loadJsonBtn">Empezar Simulacion</button>
-    <button id="toggleModeBtn">Modo Automático</button>
   </div>
   
   <script>
@@ -516,7 +627,7 @@ const phaseSequence = [
     let currentPhaseIndex = 0;
 //const phaseSequence = ['horizontal', 'yellowToVertical', 'vertical', 'yellowToHorizontal'];
 let currentPhase = phaseSequence[currentPhaseIndex];
-
+let phaseTimer;
 const semaphores = {
   right: {
     red: document.getElementById('semaphore-right-red'),
@@ -548,6 +659,34 @@ const intersection = {
   bottom: 510
 };
 
+// Función para actualizar los tiempos de los semáforos desde los inputs
+document.getElementById('apply-times').addEventListener('click', function() {
+      // Actualizar duraciones de fases
+      phases.rightGreen.duration = parseFloat(document.getElementById('right-green').value) * 1000;
+      phases.rightYellow.duration = parseFloat(document.getElementById('right-yellow').value) * 1000;
+      phases.leftGreen.duration = parseFloat(document.getElementById('left-green').value) * 1000;
+      phases.leftYellow.duration = parseFloat(document.getElementById('left-yellow').value) * 1000;
+      phases.downGreen.duration = parseFloat(document.getElementById('down-green').value) * 1000;
+      phases.downYellow.duration = parseFloat(document.getElementById('down-yellow').value) * 1000;
+      phases.upGreen.duration = parseFloat(document.getElementById('up-green').value) * 1000;
+      phases.upYellow.duration = parseFloat(document.getElementById('up-yellow').value) * 1000;
+      
+      // Reiniciar el ciclo de fases
+      if (phaseTimer) {
+        clearTimeout(phaseTimer);
+      }
+      
+      // Resetear a la primera fase y actualizar los semáforos
+      currentPhaseIndex = 0;
+      currentPhase = phaseSequence[currentPhaseIndex];
+      
+      // Iniciar el ciclo con los nuevos tiempos
+      //phaseTimer = setTimeout(advancePhase, phases[currentPhase].duration);
+      //updateSemaphores();
+      
+      alert('Tiempos de semáforos actualizados');
+    });
+
 // Función para actualizar los semáforos según la fase actual
 function updateSemaphores() {
   const phaseConfig = phases[currentPhase];
@@ -573,7 +712,8 @@ function advancePhase() {
   updateSemaphores();
   
   // Programar el siguiente cambio de fase
-  setTimeout(advancePhase, phases[currentPhase].duration);
+  // Programar el siguiente cambio de fase
+  phaseTimer = setTimeout(advancePhase, phases[currentPhase].duration);
 }
 
 
@@ -583,20 +723,42 @@ function advancePhase() {
 
 // Clase para representar un vehículo
 class Vehicle {
-  constructor(lane) {
+  constructor(lane, turnDirection, tamanioVehiculo, esManual) {
     this.lane = lane; // "right", "left", "down", "up"
     this.maxSpeed = baseSpeed + (Math.random() * 0.5); // Velocidad máxima ligeramente aleatoria
     this.speed = this.maxSpeed;
-    this.width = 40;
+    this.tipoVehiculo = "";
+    this.marca = "";
+    this.origen = "";
+    this.destino = "";
+    this.idVia =1;
+    this.width = tamanioVehiculo;
     this.height = 20;
     this.turning = false;
-    this.turnDirection = null; // 'left', 'right', or null para no girar
+    this.turnDirection = turnDirection; // 'left', 'right', or null para no girar
     this.turnProgress = 0; // 0 a 1, donde 1 significa que completó el giro
     this.element = document.createElement('div');
     this.element.className = 'car';
     
-    // Asignar probabilidad de giro (30% de probabilidad)
-    if (Math.random() < 0.3) {
+    if (turnDirection && esManual == 1) {
+      //this.turnDirection = Math.random() < 0.5 ? 'left' : 'right';
+      
+      // Crear luces intermitentes
+      const leftBlinker = document.createElement('div');
+      leftBlinker.className = 'blinker left';
+      this.element.appendChild(leftBlinker);
+      
+      const rightBlinker = document.createElement('div');
+      rightBlinker.className = 'blinker right';
+      this.element.appendChild(rightBlinker);
+      
+      // Activar el intermitente correspondiente
+      if (this.turnDirection === 'left') {
+        leftBlinker.classList.add('active');
+      } else {
+        rightBlinker.classList.add('active');
+      }
+    }else if (Math.random() < 0.3) {
       this.turnDirection = Math.random() < 0.5 ? 'left' : 'right';
       
       // Crear luces intermitentes
@@ -615,10 +777,13 @@ class Vehicle {
         rightBlinker.classList.add('active');
       }
     }
+
+    
     
     // Color aleatorio
     const hue = Math.floor(Math.random() * 360);
     this.element.style.background = `hsl(${hue}, 70%, 50%)`;
+    this.element.style.width = `${this.width}px`; 
     container.appendChild(this.element);
     
     // Posición inicial y orientación según el carril
@@ -650,6 +815,8 @@ class Vehicle {
     
     this.updatePosition();
   }
+
+
   
   updatePosition() {
     this.element.style.left = `${this.x}px`;
@@ -953,6 +1120,16 @@ isOutOfBounds() {
 }
 }
 
+
+function modificarTamano(tipoVehiculo){
+  if (tipoVehiculo === "carro") return 40;
+  if (tipoVehiculo === "moto") return 32;
+  if (tipoVehiculo === "trailer") return 50;
+  if (tipoVehiculo === "microbus") return 43;
+  if (tipoVehiculo === "camioneta") return 47;
+  return 40; // Valor por defecto
+}
+
 // Arreglos para almacenar vehículos
 let vehicles = [];
 
@@ -960,7 +1137,7 @@ let vehicles = [];
 function spawnVehicle(lane) {
   if (isPaused) return;
   
-  let vehicle = new Vehicle(lane);
+  let vehicle = new Vehicle(lane, null, 40, 0);
   vehicles.push(vehicle);
 }
 
@@ -1012,25 +1189,9 @@ function animate() {
 animate();
 
 // Controles de la interfaz
-const btnIncrease = document.getElementById('btn-increase-traffic');
-const btnDecrease = document.getElementById('btn-decrease-traffic');
 const btnToggleSim = document.getElementById('btn-toggle-sim');
 
-btnIncrease.addEventListener('click', () => {
-  // Aumentar frecuencia de generación disminuyendo el tiempo entre vehículos
-  for (const lane in spawnRate) {
-    spawnRate[lane] = Math.max(spawnRate[lane] * 0.8, 500); // Límite mínimo de 500ms
-  }
-  updateSpawnTimers();
-});
 
-btnDecrease.addEventListener('click', () => {
-  // Disminuir frecuencia de generación aumentando el tiempo entre vehículos
-  for (const lane in spawnRate) {
-    spawnRate[lane] = Math.min(spawnRate[lane] * 1.2, 6000); // Límite máximo de 6000ms
-  }
-  updateSpawnTimers();
-});
 
 btnToggleSim.addEventListener('click', () => {
   isPaused = !isPaused;
@@ -1042,7 +1203,7 @@ btnToggleSim.addEventListener('click', () => {
 });
 
 function determineLane(origen, destino) {
-  // Ejemplos básicos según tu especificación:
+  
   if (origen === "a" && destino === "b") return "right";
   if (origen === "a" && destino === "c") return "right";
   if (origen === "a" && destino === "d") return "right";
@@ -1086,11 +1247,32 @@ function spawnVehicleFromJson(lane) {
     return;
   }
   const data = jsonVehiclesByLane[lane].shift(); // Obtener el siguiente vehículo
-  let vehicle = new Vehicle(lane);
-  // Ajustar propiedades del vehículo según los datos del JSON
-  vehicle.maxSpeed = data.velocidad; // Por ejemplo, ajustar la velocidad
-  //vehicle.marca = data.marca;     // Guardar la marca (opcional)
-  // Puedes asignar otras propiedades según sea necesario
+  const origen = data.origen;
+  const destino = data.destino;
+  let turnDirection = null;
+  if (origen === "a" && destino === "b") turnDirection = null;
+  if (origen === "a" && destino === "c") turnDirection = "left";
+  if (origen === "a" && destino === "d") turnDirection = "right";
+
+  if (origen === "b" && destino === "a") turnDirection = null;
+  if (origen === "b" && destino === "c") turnDirection = "right";
+  if (origen === "b" && destino === "d") turnDirection = "left";
+
+  if (origen === "c" && destino === "d") turnDirection = null;
+  if (origen === "c" && destino === "a") turnDirection = "right";
+  if (origen === "c" && destino === "b") turnDirection = "left";
+
+  if (origen === "d" && destino === "c") turnDirection = null;
+  if (origen === "d" && destino === "a") turnDirection = "left";
+  if (origen === "d" && destino === "b") turnDirection = "right";
+  //console.log(data.tipo_vehiculo);
+  let vehicle = new Vehicle(lane, turnDirection, modificarTamano(data.tipo_vehiculo), 1);
+  vehicle.maxSpeed = data.velocidad; 
+  vehicle.tipoVehiculo = data.tipo_vehiculo; 
+  vehicle.marca = data.marca; 
+  vehicle.origen = origen;
+  vehicle.destino = destino;
+  vehicle.idVia = data.id_via; 
   
   vehicles.push(vehicle);
 }
@@ -1104,6 +1286,48 @@ function startJsonSpawnTimers() {
   spawnTimers.up = setInterval(() => spawnVehicleFromJson('up'), spawnRate.up);
 }
 
+function resetSimulation() {
+  // Clear phase timer
+  if (phaseTimer) {
+    clearTimeout(phaseTimer);
+    phaseTimer = null;
+  }
+  
+  // Clear all spawn timers
+  stopSpawnTimers();
+  
+  // Reset phase index
+  currentPhaseIndex = 0;
+  currentPhase = phaseSequence[currentPhaseIndex];
+  
+  // Clear all vehicles
+  vehicles.forEach(vehicle => {
+    if (vehicle.element && vehicle.element.parentNode) {
+      vehicle.element.parentNode.removeChild(vehicle.element);
+    }
+  });
+  vehicles = [];
+  
+  // Reset JSON vehicle queues
+  jsonVehiclesByLane = {
+    right: [],
+    left: [],
+    down: [],
+    up: []
+  };
+  
+  // Reset semaphores to initial state
+  updateSemaphores();
+  
+  // Resume simulation if it was paused
+  if (isPaused) {
+    isPaused = false;
+    btnToggleSim.textContent = 'Pausar Simulación';
+    animate();
+  }
+}
+
+
 // Variable para almacenar el modo actual: true = modo manual (JSON), false = modo automático
 let manualMode = false;
 
@@ -1114,6 +1338,7 @@ document.getElementById("loadJsonBtn").addEventListener("click", () => {
     const reader = new FileReader();
     reader.onload = function(e) {
       try {
+        resetSimulation();
         const jsonData = JSON.parse(e.target.result);
         manualMode = true;
         // Detener la generación automática si está activa
@@ -1123,9 +1348,9 @@ document.getElementById("loadJsonBtn").addEventListener("click", () => {
         // Iniciar los temporizadores de spawneo para el modo manual
         startJsonSpawnTimers();
         updateSemaphores();
-        setTimeout(advancePhase, phases[currentPhase].duration);
+        phaseTimer = setTimeout(advancePhase, phases[currentPhase].duration);
         // Cambiar el texto del botón de modo
-        document.getElementById("toggleModeBtn").textContent = "Cambiar a Modo Automático";
+        //document.getElementById("toggleModeBtn").textContent = "Cambiar a Modo Automático";
       } catch (error) {
         console.error("Error al parsear JSON", error);
       }
@@ -1138,12 +1363,13 @@ document.getElementById("loadJsonBtn").addEventListener("click", () => {
 document.getElementById("toggleModeBtn").addEventListener("click", () => {
   //manualMode = !manualMode;
   if (!manualMode) {
+    resetSimulation();
     stopSpawnTimers();
     startSpawnTimers();
     updateSemaphores();
-    setTimeout(advancePhase, phases[currentPhase].duration);
+    phaseTimer = setTimeout(advancePhase, phases[currentPhase].duration);
     // Además, puedes limpiar los vehículos cargados manualmente si lo deseas.
-    document.getElementById("toggleModeBtn").textContent = "Cambiar a Modo Manual";
+    //document.getElementById("toggleModeBtn").textContent = "Cambiar a Modo Manual";
   } else {
 
   }
