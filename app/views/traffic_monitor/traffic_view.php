@@ -707,8 +707,15 @@ function updateSemaphores() {
 
 // Cambiar fase del semáforo secuencialmente
 function advancePhase() {
+  const oldPhase = currentPhase;
   currentPhaseIndex = (currentPhaseIndex + 1) % phaseSequence.length;
   currentPhase = phaseSequence[currentPhaseIndex];
+
+  if (manualMode) {
+    recordSemaphoreChange(oldPhase, currentPhase);
+  }
+
+
   updateSemaphores();
   
   // Programar el siguiente cambio de fase
@@ -724,6 +731,7 @@ function advancePhase() {
 // Clase para representar un vehículo
 class Vehicle {
   constructor(lane, turnDirection, tamanioVehiculo, esManual) {
+    this.id = Math.random().toString(36).substr(2, 9);
     this.lane = lane; // "right", "left", "down", "up"
     this.maxSpeed = baseSpeed + (Math.random() * 0.5); // Velocidad máxima ligeramente aleatoria
     this.speed = this.maxSpeed;
@@ -739,7 +747,7 @@ class Vehicle {
     this.turnProgress = 0; // 0 a 1, donde 1 significa que completó el giro
     this.element = document.createElement('div');
     this.element.className = 'car';
-    
+    this.countedForIntersection = false;
     if (turnDirection && esManual == 1) {
       //this.turnDirection = Math.random() < 0.5 ? 'left' : 'right';
       
@@ -813,6 +821,13 @@ class Vehicle {
       [this.width, this.height] = [this.height, this.width];
     }
     
+    /*if (this.isInIntersection()) {
+      // Record that this vehicle is passing through the intersection
+      recordVehiclePassingThrough(this, this.lane);
+    } else if (this.shouldStopForTrafficLight() && this.speed === 0) {
+      // Record that this vehicle is stopped at a red light
+      recordVehicleStoppedAtRed(this, this.lane);
+    }*/
     this.updatePosition();
   }
 
@@ -1107,6 +1122,17 @@ if (this.lane === 'right') {
   this.y -= this.speed;
 }
 
+// Si estamos en modo manual y el vehículo está en la intersección pero aún no se ha contado
+if (manualMode && this.isInIntersection() && !this.countedForIntersection) {
+    recordVehiclePassingThrough(this, this.lane);
+    this.countedForIntersection = true; // Marcar como contado
+  }
+  
+  // Si el vehículo estaba en la intersección pero ya salió, reiniciar el contador
+  // para que pueda ser contado nuevamente si vuelve a entrar (en caso de que cambie de dirección)
+  if (this.countedForIntersection && !this.isInIntersection()) {
+    this.countedForIntersection = false;
+  }
 this.updatePosition();
 }
 
@@ -1170,6 +1196,16 @@ function stopSpawnTimers() {
 // Iniciar temporizadores de generación
 //startSpawnTimers();
 
+// Variables para guardar los vehículos a spawnear de cada carril
+let jsonVehiclesByLane = {
+  right: [],
+  left: [],
+  down: [],
+  up: []
+};
+// Variable para almacenar el modo actual: true = modo manual (JSON), false = modo automático
+let manualMode = false;
+
 // Función de animación para actualizar la simulación
 function animate() {
   if (isPaused) return;
@@ -1182,6 +1218,8 @@ function animate() {
   // Eliminar vehículos que salieron del área de simulación
   vehicles = vehicles.filter(vehicle => !vehicle.isOutOfBounds());
   
+  checkAllVehiclesProcessed();
+
   requestAnimationFrame(animate);
 }
 
@@ -1224,13 +1262,7 @@ function determineLane(origen, destino) {
   return "right"; // Valor por defecto
 }
 
-// Variables para guardar los vehículos a spawnear de cada carril
-let jsonVehiclesByLane = {
-  right: [],
-  left: [],
-  down: [],
-  up: []
-};
+
 
 function processJsonVehicles(jsonData) {
   jsonData.datos_vehiculo_prueba.forEach(data => {
@@ -1280,6 +1312,14 @@ function spawnVehicleFromJson(lane) {
 
 // Función para iniciar los temporizadores de spawneo para cada carril (modo JSON)
 function startJsonSpawnTimers() {
+  /*for (const direction in monitorData.semaphoreStats) {
+    if (phases[currentPhase].states[direction] === RED) {
+      const stateKey = 'rojo';
+      monitorData.semaphoreStats[direction][stateKey].count = 1;
+      monitorData.semaphoreStats[direction][stateKey].vehiclesStopped.push([]);
+    }
+  }*/
+
   spawnTimers.right = setInterval(() => spawnVehicleFromJson('right'), spawnRate.right);
   spawnTimers.left = setInterval(() => spawnVehicleFromJson('left'), spawnRate.left);
   spawnTimers.down = setInterval(() => spawnVehicleFromJson('down'), spawnRate.down);
@@ -1315,6 +1355,10 @@ function resetSimulation() {
     down: [],
     up: []
   };
+
+  // Reset monitoring data
+  resetMonitorData();
+  
   
   // Reset semaphores to initial state
   updateSemaphores();
@@ -1328,8 +1372,7 @@ function resetSimulation() {
 }
 
 
-// Variable para almacenar el modo actual: true = modo manual (JSON), false = modo automático
-let manualMode = false;
+
 
 // Evento para cargar el JSON
 document.getElementById("loadJsonBtn").addEventListener("click", () => {
@@ -1349,8 +1392,7 @@ document.getElementById("loadJsonBtn").addEventListener("click", () => {
         startJsonSpawnTimers();
         updateSemaphores();
         phaseTimer = setTimeout(advancePhase, phases[currentPhase].duration);
-        // Cambiar el texto del botón de modo
-        //document.getElementById("toggleModeBtn").textContent = "Cambiar a Modo Automático";
+        startMonitoring();
       } catch (error) {
         console.error("Error al parsear JSON", error);
       }
@@ -1359,7 +1401,6 @@ document.getElementById("loadJsonBtn").addEventListener("click", () => {
   }
 });
 
-// Evento para alternar entre modo manual y automático
 document.getElementById("toggleModeBtn").addEventListener("click", () => {
   //manualMode = !manualMode;
   if (!manualMode) {
@@ -1368,7 +1409,6 @@ document.getElementById("toggleModeBtn").addEventListener("click", () => {
     startSpawnTimers();
     updateSemaphores();
     phaseTimer = setTimeout(advancePhase, phases[currentPhase].duration);
-    // Además, puedes limpiar los vehículos cargados manualmente si lo deseas.
     //document.getElementById("toggleModeBtn").textContent = "Cambiar a Modo Manual";
   } else {
 
@@ -1377,5 +1417,291 @@ document.getElementById("toggleModeBtn").addEventListener("click", () => {
 //startSpawnTimers();
 //updateSemaphores();
 //setTimeout(advancePhase, phases[currentPhase].duration);
+// Variables para monitoreo
+let monitorData = {
+  simulationStartTime: null,
+  simulationEndTime: null,
+  semaphoreStats: {
+    right: {
+      verde: { time: 0, count: 0, vehicles: 0, totalSpeed: 0 },
+      amarillo: { time: 0, count: 0 },
+      rojo: { time: 0, count: 0 },
+      totalVehicles: 0,  // Contador total de vehículos
+      lastStateChange: null,
+      currentState: null
+    },
+    left: {
+      verde: { time: 0, count: 0, vehicles: 0, totalSpeed: 0 },
+      amarillo: { time: 0, count: 0 },
+      rojo: { time: 0, count: 0 },
+      totalVehicles: 0,  // Contador total de vehículos
+      lastStateChange: null,
+      currentState: null
+    },
+    down: {
+      verde: { time: 0, count: 0, vehicles: 0, totalSpeed: 0 },
+      amarillo: { time: 0, count: 0 },
+      rojo: { time: 0, count: 0 },
+      totalVehicles: 0,  // Contador total de vehículos
+      lastStateChange: null,
+      currentState: null
+    },
+    up: {
+      verde: { time: 0, count: 0, vehicles: 0, totalSpeed: 0 },
+      amarillo: { time: 0, count: 0 },
+      rojo: { time: 0, count: 0 },
+      totalVehicles: 0,  // Contador total de vehículos
+      lastStateChange: null,
+      currentState: null
+    }
+  },
+  // Conjunto para llevar el registro de IDs de vehículos que ya hemos contado
+  processedVehicleIds: new Set()
+};
+
+// Función para inicializar el monitoreo
+function startMonitoring() {
+  monitorData.simulationStartTime = new Date();
+  
+  // Iniciar monitoreo de estados iniciales de los semáforos
+  for (const direction in monitorData.semaphoreStats) {
+    const state = phases[currentPhase].states[direction];
+    const stateKey = getStateKeyName(state);
+    monitorData.semaphoreStats[direction].currentState = stateKey;
+    monitorData.semaphoreStats[direction].lastStateChange = new Date();
+  }
+}
+
+// Convertir estado del semáforo a nombre para estadísticas
+function getStateKeyName(state) {
+  if (state === GREEN) return 'verde';
+  if (state === YELLOW) return 'amarillo';
+  if (state === RED) return 'rojo';
+  return null;
+}
+
+// Función para registrar cambios de estado en los semáforos
+function recordSemaphoreChange(oldPhase, newPhase) {
+  const now = new Date();
+  
+  for (const direction in monitorData.semaphoreStats) {
+    const oldState = phases[oldPhase].states[direction];
+    const newState = phases[newPhase].states[direction];
+    
+    if (oldState !== newState) {
+      const stats = monitorData.semaphoreStats[direction];
+      const oldStateKey = getStateKeyName(oldState);
+      const newStateKey = getStateKeyName(newState);
+      
+      // Calcular el tiempo que duró el estado anterior
+      if (oldStateKey && stats.lastStateChange) {
+        const duration = (now - stats.lastStateChange) / 1000; // en segundos
+        //stats[oldStateKey].time += duration;
+        stats[oldStateKey].count++;
+      }
+      
+      // Actualizar el estado actual y tiempo de cambio
+      stats.currentState = newStateKey;
+      stats.lastStateChange = now;
+    }
+  }
+}
+
+function getTotalRedTime(direction) {
+  // Suma de todos los tiempos excepto el suyo propio
+  let totalRedTime = 0;
+  for (const phase in phases) {
+    if (phases[phase].states[direction] === RED) {
+      totalRedTime += phases[phase].duration / 1000; // convertir a segundos
+    }
+  }
+  return totalRedTime;
+}
+
+function recordVehiclePassingThrough(vehicle, direction) {
+  // Evitar contar el mismo vehículo más de una vez para la misma dirección
+  if (monitorData.processedVehicleIds.has(vehicle.id + '-' + direction)) {
+    return;
+  }
+  
+  // Marcar este vehículo como procesado para esta dirección
+  monitorData.processedVehicleIds.add(vehicle.id + '-' + direction);
+  
+  const stats = monitorData.semaphoreStats[direction];
+  
+  // Incrementar el contador total de vehículos para esta dirección
+  stats.totalVehicles++;
+  
+  // Si está en verde, también contamos para estadísticas de velocidad
+  if (stats.currentState === 'verde') {
+    stats.verde.vehicles++;
+    stats.verde.totalSpeed += vehicle.speed;
+  }
+}
+
+function checkAllVehiclesProcessed() {
+  // Verificar que estamos en modo manual y que jsonVehiclesByLane esté definido
+  if (!manualMode) return;
+  
+  // Comprobar si quedan vehículos por spawnear
+  const noMoreVehiclesToSpawn = Object.values(jsonVehiclesByLane).every(lane => lane.length === 0);
+  // Comprobar si hay vehículos activos en la simulación
+  const noActiveVehicles = vehicles.length === 0;
+  
+  if (noMoreVehiclesToSpawn && noActiveVehicles) {
+    // La simulación ha terminado, mostrar resultados
+    showSimulationResults();
+  }
+}
+
+// Función para resetear los datos de monitoreo
+function resetMonitorData() {
+  monitorData = {
+    simulationStartTime: null,
+    simulationEndTime: null,
+    semaphoreStats: {
+      right: {
+        verde: { time: 0, count: 0, vehicles: 0, totalSpeed: 0 },
+        amarillo: { time: 0, count: 0 },
+        rojo: { time: 0, count: 0 },
+        totalVehicles: 0,
+        lastStateChange: null,
+        currentState: null
+      },
+      left: {
+        verde: { time: 0, count: 0, vehicles: 0, totalSpeed: 0 },
+        amarillo: { time: 0, count: 0 },
+        rojo: { time: 0, count: 0 },
+        totalVehicles: 0,
+        lastStateChange: null,
+        currentState: null
+      },
+      down: {
+        verde: { time: 0, count: 0, vehicles: 0, totalSpeed: 0 },
+        amarillo: { time: 0, count: 0 },
+        rojo: { time: 0, count: 0 },
+        totalVehicles: 0,
+        lastStateChange: null,
+        currentState: null
+      },
+      up: {
+        verde: { time: 0, count: 0, vehicles: 0, totalSpeed: 0 },
+        amarillo: { time: 0, count: 0 },
+        rojo: { time: 0, count: 0 },
+        totalVehicles: 0,
+        lastStateChange: null,
+        currentState: null
+      }
+    },
+    processedVehicleIds: new Set()
+  };
+}
+
+// Función para mostrar los resultados de la simulación
+function showSimulationResults() {
+  isPaused = true;
+  //btnToggleSim.textContent = 'Reanudar Simulación';
+  manualMode = false;
+  monitorData.simulationEndTime = new Date();
+  const totalTime = (monitorData.simulationEndTime - monitorData.simulationStartTime) / 1000;
+  
+  // Actualizar tiempo del último estado
+  for (const direction in monitorData.semaphoreStats) {
+    const stats = monitorData.semaphoreStats[direction];
+    if (stats.currentState && stats.lastStateChange) {
+      const duration = (monitorData.simulationEndTime - stats.lastStateChange) / 1000;
+      stats[stats.currentState].time += duration;
+    }
+  }
+  
+  // Crear elemento para mostrar resultados
+  const resultsDiv = document.createElement('div');
+  resultsDiv.className = 'simulation-results';
+  resultsDiv.style.position = 'absolute';
+  resultsDiv.style.top = '50px';
+  resultsDiv.style.left = '50px';
+  resultsDiv.style.width = '500px';
+  resultsDiv.style.backgroundColor = 'white';
+  resultsDiv.style.padding = '20px';
+  resultsDiv.style.border = '2px solid black';
+  resultsDiv.style.zIndex = '1000';
+  resultsDiv.style.overflowY = 'auto';
+  resultsDiv.style.maxHeight = '80vh';
+  
+  // Formatear fecha y hora para mostrar
+  const startTime = formatTime(monitorData.simulationStartTime);
+  const endTime = formatTime(monitorData.simulationEndTime);
+  
+  // Generar HTML con los resultados
+  let resultsHTML = `
+    <h2>Resultados de la Simulación</h2>
+    <h3>Información General</h3>
+    <p>Tipo de prueba: manual</p>
+    <p>Fecha: ${formatDate(monitorData.simulationStartTime)}</p>
+    <p>Hora inicio: ${startTime}</p>
+    <p>Hora fin: ${endTime}</p>
+    <p>Tiempo total: ${totalTime.toFixed(2)} segundos</p>
+    
+    <h3>Estadísticas por Semáforo</h3>
+  `;
+  
+  // Nombres más amigables para las direcciones
+  const directionNames = {
+    right: 'Derecho',
+    left: 'Izquierdo',
+    down: 'Abajo',
+    up: 'Arriba'
+  };
+  
+  // Añadir estadísticas de cada semáforo
+  for (const direction in monitorData.semaphoreStats) {
+    const stats = monitorData.semaphoreStats[direction];
+    const avgSpeed = stats.verde.vehicles > 0 ? stats.verde.totalSpeed / stats.verde.vehicles : 0;
+    tiemposVerde = direction+"-green";
+    tiemposAmarillo = direction+"-yellow";
+    tiemposRojo = getTotalRedTime(direction);
+    resultsHTML += `
+
+      <h4>Semáforo ${directionNames[direction]}</h4>
+      <p>Tiempo en verde: ${parseFloat(document.getElementById(tiemposVerde).value)}s</p>
+      <p>Tiempo en amarillo: ${parseFloat(document.getElementById(tiemposAmarillo).value)}s</p>
+      <p>Tiempo en rojo: ${tiemposRojo}s</p>
+      <p>Vehículos totales: ${stats.totalVehicles}</p>
+      <p>Velocidad promedio: ${avgSpeed.toFixed(1)} px/frame</p>
+      <p>Veces en verde: ${stats.verde.count}</p>
+      <p>Veces en amarillo: ${stats.amarillo.count}</p>
+      <p>Veces en rojo: ${stats.rojo.count}</p>
+    `;
+  }
+  
+  // Botón para cerrar resultados
+  resultsHTML += `
+    <button id="close-results" style="margin-top: 20px; padding: 8px 16px;">Cerrar</button>
+  `;
+  
+  resultsDiv.innerHTML = resultsHTML;
+  document.body.appendChild(resultsDiv);
+  
+  // Evento para cerrar los resultados
+  document.getElementById('close-results').addEventListener('click', () => {
+    document.body.removeChild(resultsDiv);
+  });
+}
+
+// Funciones de utilidad para formatear fecha y hora
+function formatTime(date) {
+  if (!date) {
+    return "00:00:00"; // Valor por defecto si la fecha es nula
+  }
+  return date.toLocaleTimeString();
+}
+
+// Agregar esta función si no existe en tu código
+function formatDate(date) {
+  if (!date) {
+    return "00/00/0000"; // Valor por defecto si la fecha es nula
+  }
+  return date.toLocaleDateString();
+}
 
   </script>
