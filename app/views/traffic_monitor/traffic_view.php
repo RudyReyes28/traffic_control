@@ -446,6 +446,10 @@
         <button id="toggleModeBtn">Simulacion Automática</button>
         <button id="end-auto-sim" style="display: none;">Terminar Simulación Automática</button>
       </div>
+
+      <div style="margin-top: 40px;">
+        <button id="session-close" style="background-color: #555;" >Cerrar Sesion</button>
+      </div>
     </div>
     
     <!-- Contenedor de la simulación -->
@@ -1384,7 +1388,14 @@ function resetSimulation() {
 }
 
 
+let iterationCounter = 1; // Contador de iteraciones para la prueba actual
+let isNewTest = true; // Bandera para indicar si se inició una nueva prueba
+let testId = generateUniqueId(); // ID único para cada prueba
 
+// Función para generar un ID único para cada prueba
+function generateUniqueId() {
+  return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+}
 
 // Evento para cargar el JSON
 document.getElementById("loadJsonBtn").addEventListener("click", () => {
@@ -1404,7 +1415,10 @@ document.getElementById("loadJsonBtn").addEventListener("click", () => {
         startJsonSpawnTimers();
         updateSemaphores();
         phaseTimer = setTimeout(advancePhase, phases[currentPhase].duration);
+
         startMonitoring();
+
+
       } catch (error) {
         console.error("Error al parsear JSON", error);
       }
@@ -1415,12 +1429,13 @@ document.getElementById("loadJsonBtn").addEventListener("click", () => {
 
 document.getElementById("toggleModeBtn").addEventListener("click", () => {
   if (!manualMode) {
+    isNewTest = true;
     resetSimulation();
     stopSpawnTimers();
     startSpawnTimers();
     updateSemaphores();
     phaseTimer = setTimeout(advancePhase, phases[currentPhase].duration);
-    startMonitoring(); // Inicia monitoreo para modo automático
+    startMonitoring();
     document.getElementById("end-auto-sim").style.display = "block"; // Muestra el botón de finalización
   } else {
     document.getElementById("end-auto-sim").style.display = "none"; // Oculta el botón en modo manual
@@ -1791,14 +1806,40 @@ function showSimulationResults() {
   
   // Botón para cerrar resultados
   resultsHTML += `
-    <button id="close-results" style="margin-top: 20px; padding: 8px 16px;">Cerrar</button>
+    <h3>Comentarios</h3>
+    <textarea id="result-comment" rows="4" style="width: 100%; margin-bottom: 15px;" placeholder="Agregue sus comentarios sobre esta prueba..."></textarea>
+    
+    <div style="display: flex; justify-content: space-between; margin-top: 20px;">
+      <button id="new-results" style="padding: 8px 16px;">Enviar como nuevo Test</button>
+      <button id="next-iteration" style="padding: 8px 16px;">Enviar como nueva Iteración</button>
+    </div>
   `;
   
   resultsDiv.innerHTML = resultsHTML;
   document.body.appendChild(resultsDiv);
   
-  // Evento para cerrar los resultados
-  document.getElementById('close-results').addEventListener('click', () => {
+  resultsDiv.innerHTML = resultsHTML;
+  document.body.appendChild(resultsDiv);
+  // Actualizar datos de monitoreo para la nueva iteración o prueba
+  
+  
+  document.getElementById('new-results').addEventListener('click', () => {
+    const commentText = document.getElementById('result-comment').value;
+    isNewTest = true;
+    iterationCounter = 1;
+    const resultsJSON = generateResultsJSON(commentText, wasManualMode);
+    isNewTest = false;
+    //console.log(resultsJSON);
+    sendResultsToServer(resultsJSON);
+    document.body.removeChild(resultsDiv);
+  });
+
+  document.getElementById('next-iteration').addEventListener('click', () => {
+    const commentText = document.getElementById('result-comment').value;
+    iterationCounter++;
+    const resultsJSON = generateResultsJSON(commentText, wasManualMode);
+    //console.log(resultsJSON);
+    sendResultsToServer(resultsJSON);
     document.body.removeChild(resultsDiv);
   });
 }
@@ -1818,5 +1859,149 @@ function formatDate(date) {
   }
   return date.toLocaleDateString();
 }
+
+function sendResultsToServer(resultsData) {
+  const loadingIndicator = document.createElement('div');
+  loadingIndicator.textContent = 'Enviando datos...';
+  loadingIndicator.style.position = 'fixed';
+  loadingIndicator.style.bottom = '20px';
+  loadingIndicator.style.right = '20px';
+  loadingIndicator.style.padding = '10px';
+  loadingIndicator.style.backgroundColor = '#f8f9fa';
+  loadingIndicator.style.border = '1px solid #dee2e6';
+  loadingIndicator.style.borderRadius = '4px';
+  loadingIndicator.style.zIndex = '1000';
+  document.body.appendChild(loadingIndicator);
+
+  fetch('../../controllers/reports_monitor/procesar_resultados.php', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(resultsData)
+  })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error('Error en la respuesta del servidor: ' + response.status);
+    }
+    return response.json();
+  })
+  .then(data => {
+    console.log('Respuesta del servidor:', data);
+    loadingIndicator.textContent = 'Datos guardados correctamente';
+    loadingIndicator.style.backgroundColor = '#d4edda';
+    loadingIndicator.style.border = '1px solid #c3e6cb';
+    
+    setTimeout(() => {
+      if (document.body.contains(loadingIndicator)) {
+        document.body.removeChild(loadingIndicator);
+      }
+    }, 3000);
+    
+  })
+  .catch(error => {
+    console.error('Error al enviar los datos:', error);
+    loadingIndicator.textContent = 'Error al guardar los datos';
+    loadingIndicator.style.backgroundColor = '#f8d7da';
+    loadingIndicator.style.border = '1px solid #f5c6cb';
+    
+    setTimeout(() => {
+      if (document.body.contains(loadingIndicator)) {
+        document.body.removeChild(loadingIndicator);
+      }
+    }, 3000);
+  });
+}
+
+
+function generateResultsJSON(commentText, wasManualMode) {
+  const totalTime = (monitorData.simulationEndTime - monitorData.simulationStartTime) / 1000;
+  
+  // Extraer tiempos de semáforos configurados
+  const semaphoreTimes = {
+    right: {
+      green: parseFloat(document.getElementById('right-green').value),
+      yellow: parseFloat(document.getElementById('right-yellow').value),
+      red: getTotalRedTime('right')
+    },
+    left: {
+      green: parseFloat(document.getElementById('left-green').value),
+      yellow: parseFloat(document.getElementById('left-yellow').value),
+      red: getTotalRedTime('left')
+    },
+    down: {
+      green: parseFloat(document.getElementById('down-green').value),
+      yellow: parseFloat(document.getElementById('down-yellow').value),
+      red: getTotalRedTime('down')
+    },
+    up: {
+      green: parseFloat(document.getElementById('up-green').value),
+      yellow: parseFloat(document.getElementById('up-yellow').value),
+      red: getTotalRedTime('up')
+    }
+  };
+  
+  // Preparar vehículos procesados (solo para modo manual)
+  const processedVehicles = wasManualMode ? vehiclesManual.map(vehicle => ({
+    id: vehicle.id,
+    tipo: vehicle.tipoVehiculo,
+    marca: vehicle.marca,
+    origen: vehicle.origen,
+    destino: vehicle.destino,
+    velocidad: vehicle.maxSpeed,
+    idVia: vehicle.idVia
+  })) : [];
+  
+  // Estructura principal del JSON
+  const results = {
+    metadatos: {
+      iteracion: iterationCounter,
+      es_nueva_prueba: isNewTest,
+      modo: wasManualMode ? 'manual' : 'automatico',
+      fecha: formatDate(monitorData.simulationStartTime),
+      hora_inicio: formatTime(monitorData.simulationStartTime),
+      hora_fin: formatTime(monitorData.simulationEndTime),
+      duracion_total: totalTime,
+      comentario: commentText
+    },
+    configuracion_semaforos: semaphoreTimes,
+    estadisticas: {
+      right: extractDirectionStats(monitorData.semaphoreStats.right),
+      left: extractDirectionStats(monitorData.semaphoreStats.left),
+      down: extractDirectionStats(monitorData.semaphoreStats.down),
+      up: extractDirectionStats(monitorData.semaphoreStats.up)
+    },
+    vehiculos: processedVehicles
+  };
+  
+  return results;
+}
+
+function extractDirectionStats(dirStats) {
+  return {
+    total_vehiculos: dirStats.totalVehicles,
+    verde: {
+      count: dirStats.verde.count,
+      vehiculos: dirStats.verde.vehicles,
+      velocidad_promedio: dirStats.verde.vehicles > 0 ? dirStats.verde.totalSpeed / dirStats.verde.vehicles : 0,
+      iteraciones: dirStats.verde.vehiclesByIteration.map(veh => veh.length)
+    },
+    amarillo: {
+      count: dirStats.amarillo.count,
+      iteraciones: dirStats.amarillo.vehiclesByIteration.map(veh => veh.length)
+    },
+    rojo: {
+      count: dirStats.rojo.count,
+      detenidos: dirStats.rojo.stoppedByIteration.map(veh => veh.length),
+      pasaron: dirStats.rojo.vehiclesByIteration.map(veh => veh.length)
+    }
+  };
+}
+
+document.getElementById("session-close").addEventListener("click", () => {
+  if (confirm("¿Está seguro que desea cerrar la sesión?")) {
+    window.location.href = "../../controllers/authentication/session_close.php";
+  }
+});
 
   </script>
