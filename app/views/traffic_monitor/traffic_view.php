@@ -1064,6 +1064,7 @@ class Vehicle {
     // Verificar obstáculos adelante y el semáforo
     let shouldStop = this.shouldStopForTrafficLight();
     let minDistance = Infinity;
+    
 
     obstacles.forEach(vehicle => {
   if (vehicle !== this && vehicle.lane === this.lane) {
@@ -1105,6 +1106,7 @@ if (minDistance < safeDistance) {
   shouldStop = true;
 }
 
+
 // Si debe detenerse por semáforo o vehículo, desacelerar gradualmente
 if (shouldStop && this.speed > 0) {
   this.speed -= decelerationRate;
@@ -1121,6 +1123,9 @@ if (this.lane === 'right') {
 } else if (this.lane === 'up') {
   this.y -= this.speed;
 }
+if (shouldStop && this.speed === 0) {
+      recordVehicleStoppedAtRed(this, this.lane);
+  }
 
 // Si estamos en modo manual y el vehículo está en la intersección pero aún no se ha contado
 if (manualMode && this.isInIntersection() && !this.countedForIntersection) {
@@ -1133,6 +1138,8 @@ if (manualMode && this.isInIntersection() && !this.countedForIntersection) {
   if (this.countedForIntersection && !this.isInIntersection()) {
     this.countedForIntersection = false;
   }
+
+
 this.updatePosition();
 }
 
@@ -1423,39 +1430,42 @@ let monitorData = {
   simulationEndTime: null,
   semaphoreStats: {
     right: {
-      verde: { time: 0, count: 0, vehicles: 0, totalSpeed: 0 },
-      amarillo: { time: 0, count: 0 },
-      rojo: { time: 0, count: 0 },
-      totalVehicles: 0,  // Contador total de vehículos
+      verde: { time: 0, count: 0, vehicles: 0, totalSpeed: 0, vehiclesByIteration: [] },
+      amarillo: { time: 0, count: 0, vehiclesByIteration: [] },
+      rojo: { time: 0, count: 0, vehiclesByIteration: [], stoppedByIteration: [] },
+      totalVehicles: 0,
       lastStateChange: null,
-      currentState: null
+      currentState: null,
+      currentIteration: { state: null, index: 0 }
     },
     left: {
-      verde: { time: 0, count: 0, vehicles: 0, totalSpeed: 0 },
-      amarillo: { time: 0, count: 0 },
-      rojo: { time: 0, count: 0 },
-      totalVehicles: 0,  // Contador total de vehículos
+      verde: { time: 0, count: 0, vehicles: 0, totalSpeed: 0, vehiclesByIteration: [] },
+      amarillo: { time: 0, count: 0, vehiclesByIteration: [] },
+      rojo: { time: 0, count: 0, vehiclesByIteration: [], stoppedByIteration: [] },
+      totalVehicles: 0,
       lastStateChange: null,
-      currentState: null
+      currentState: null,
+      currentIteration: { state: null, index: 0 }
     },
     down: {
-      verde: { time: 0, count: 0, vehicles: 0, totalSpeed: 0 },
-      amarillo: { time: 0, count: 0 },
-      rojo: { time: 0, count: 0 },
-      totalVehicles: 0,  // Contador total de vehículos
+      verde: { time: 0, count: 0, vehicles: 0, totalSpeed: 0, vehiclesByIteration: [] },
+      amarillo: { time: 0, count: 0, vehiclesByIteration: [] },
+      rojo: { time: 0, count: 0, vehiclesByIteration: [], stoppedByIteration: [] },
+      totalVehicles: 0,
       lastStateChange: null,
-      currentState: null
+      currentState: null,
+      currentIteration: { state: null, index: 0 }
     },
     up: {
-      verde: { time: 0, count: 0, vehicles: 0, totalSpeed: 0 },
-      amarillo: { time: 0, count: 0 },
-      rojo: { time: 0, count: 0 },
-      totalVehicles: 0,  // Contador total de vehículos
+      verde: { time: 0, count: 0, vehicles: 0, totalSpeed: 0, vehiclesByIteration: [] },
+      amarillo: { time: 0, count: 0, vehiclesByIteration: [] },
+      rojo: { time: 0, count: 0, vehiclesByIteration: [], stoppedByIteration: [] },
+      totalVehicles: 0,
       lastStateChange: null,
-      currentState: null
+      currentState: null,
+      currentIteration: { state: null, index: 0 }
     }
   },
-  // Conjunto para llevar el registro de IDs de vehículos que ya hemos contado
   processedVehicleIds: new Set()
 };
 
@@ -1467,8 +1477,20 @@ function startMonitoring() {
   for (const direction in monitorData.semaphoreStats) {
     const state = phases[currentPhase].states[direction];
     const stateKey = getStateKeyName(state);
+    
     monitorData.semaphoreStats[direction].currentState = stateKey;
     monitorData.semaphoreStats[direction].lastStateChange = new Date();
+    
+    // Inicializar el seguimiento de la primera iteración
+    monitorData.semaphoreStats[direction][stateKey].vehiclesByIteration = [[]];
+    if (stateKey === 'rojo') {
+      monitorData.semaphoreStats[direction][stateKey].stoppedByIteration = [[]];
+    }
+    
+    monitorData.semaphoreStats[direction].currentIteration = {
+      state: stateKey,
+      index: 0
+    };
   }
 }
 
@@ -1496,8 +1518,28 @@ function recordSemaphoreChange(oldPhase, newPhase) {
       // Calcular el tiempo que duró el estado anterior
       if (oldStateKey && stats.lastStateChange) {
         const duration = (now - stats.lastStateChange) / 1000; // en segundos
-        //stats[oldStateKey].time += duration;
         stats[oldStateKey].count++;
+        
+        // Preparar para el siguiente ciclo de este estado
+        // Iniciamos un nuevo array para rastrear vehículos en esta iteración
+        if (newStateKey !== oldStateKey) {
+          // Iniciar una nueva iteración para el nuevo estado
+          if (!stats[newStateKey].vehiclesByIteration) {
+            stats[newStateKey].vehiclesByIteration = [];
+          }
+          stats[newStateKey].vehiclesByIteration.push([]);
+          
+          if (newStateKey === 'rojo') {
+            if (!stats[newStateKey].stoppedByIteration) {
+              stats[newStateKey].stoppedByIteration = [];
+            }
+            stats[newStateKey].stoppedByIteration.push([]);
+          }
+          
+          // Actualizar el seguimiento de la iteración actual
+          stats.currentIteration.state = newStateKey;
+          stats.currentIteration.index = stats[newStateKey].vehiclesByIteration.length - 1;
+        }
       }
       
       // Actualizar el estado actual y tiempo de cambio
@@ -1532,10 +1574,41 @@ function recordVehiclePassingThrough(vehicle, direction) {
   // Incrementar el contador total de vehículos para esta dirección
   stats.totalVehicles++;
   
-  // Si está en verde, también contamos para estadísticas de velocidad
-  if (stats.currentState === 'verde') {
-    stats.verde.vehicles++;
-    stats.verde.totalSpeed += vehicle.speed;
+  // Añadir el vehículo a la iteración actual
+  const currentState = stats.currentIteration.state;
+  const currentIndex = stats.currentIteration.index;
+  
+  if (currentState && currentIndex >= 0) {
+    if (!stats[currentState].vehiclesByIteration[currentIndex]) {
+      stats[currentState].vehiclesByIteration[currentIndex] = [];
+    }
+    
+    stats[currentState].vehiclesByIteration[currentIndex].push(vehicle.id);
+    
+    // Si está en verde, también contamos para estadísticas de velocidad
+    if (currentState === 'verde') {
+      stats.verde.vehicles++;
+      stats.verde.totalSpeed += vehicle.speed;
+    }
+  }
+}
+
+function recordVehicleStoppedAtRed(vehicle, direction) {
+  const stats = monitorData.semaphoreStats[direction];
+  
+  // Solo registrar si el semáforo está en rojo
+  if (stats.currentState === 'rojo') {
+    const currentIndex = stats.currentIteration.index;
+    const vehicleIdKey = vehicle.id + '-' + direction;
+    
+    if (!stats.rojo.stoppedByIteration[currentIndex]) {
+      stats.rojo.stoppedByIteration[currentIndex] = [];
+    }
+    
+    // Evitar contar el mismo vehículo más de una vez en la misma iteración
+    if (!stats.rojo.stoppedByIteration[currentIndex].includes(vehicleIdKey)) {
+      stats.rojo.stoppedByIteration[currentIndex].push(vehicleIdKey);
+    }
   }
 }
 
@@ -1561,36 +1634,40 @@ function resetMonitorData() {
     simulationEndTime: null,
     semaphoreStats: {
       right: {
-        verde: { time: 0, count: 0, vehicles: 0, totalSpeed: 0 },
-        amarillo: { time: 0, count: 0 },
-        rojo: { time: 0, count: 0 },
+        verde: { time: 0, count: 0, vehicles: 0, totalSpeed: 0, vehiclesByIteration: [] },
+        amarillo: { time: 0, count: 0, vehiclesByIteration: [] },
+        rojo: { time: 0, count: 0, vehiclesByIteration: [], stoppedByIteration: [] },
         totalVehicles: 0,
         lastStateChange: null,
-        currentState: null
+        currentState: null,
+        currentIteration: { state: null, index: 0 }
       },
       left: {
-        verde: { time: 0, count: 0, vehicles: 0, totalSpeed: 0 },
-        amarillo: { time: 0, count: 0 },
-        rojo: { time: 0, count: 0 },
+        verde: { time: 0, count: 0, vehicles: 0, totalSpeed: 0, vehiclesByIteration: [] },
+        amarillo: { time: 0, count: 0, vehiclesByIteration: [] },
+        rojo: { time: 0, count: 0, vehiclesByIteration: [], stoppedByIteration: [] },
         totalVehicles: 0,
         lastStateChange: null,
-        currentState: null
+        currentState: null,
+        currentIteration: { state: null, index: 0 }
       },
       down: {
-        verde: { time: 0, count: 0, vehicles: 0, totalSpeed: 0 },
-        amarillo: { time: 0, count: 0 },
-        rojo: { time: 0, count: 0 },
+        verde: { time: 0, count: 0, vehicles: 0, totalSpeed: 0, vehiclesByIteration: [] },
+        amarillo: { time: 0, count: 0, vehiclesByIteration: [] },
+        rojo: { time: 0, count: 0, vehiclesByIteration: [], stoppedByIteration: [] },
         totalVehicles: 0,
         lastStateChange: null,
-        currentState: null
+        currentState: null,
+        currentIteration: { state: null, index: 0 }
       },
       up: {
-        verde: { time: 0, count: 0, vehicles: 0, totalSpeed: 0 },
-        amarillo: { time: 0, count: 0 },
-        rojo: { time: 0, count: 0 },
+        verde: { time: 0, count: 0, vehicles: 0, totalSpeed: 0, vehiclesByIteration: [] },
+        amarillo: { time: 0, count: 0, vehiclesByIteration: [] },
+        rojo: { time: 0, count: 0, vehiclesByIteration: [], stoppedByIteration: [] },
         totalVehicles: 0,
         lastStateChange: null,
-        currentState: null
+        currentState: null,
+        currentIteration: { state: null, index: 0 }
       }
     },
     processedVehicleIds: new Set()
@@ -1660,18 +1737,37 @@ function showSimulationResults() {
     tiemposVerde = direction+"-green";
     tiemposAmarillo = direction+"-yellow";
     tiemposRojo = getTotalRedTime(direction);
+    
     resultsHTML += `
-
       <h4>Semáforo ${directionNames[direction]}</h4>
       <p>Tiempo en verde: ${parseFloat(document.getElementById(tiemposVerde).value)}s</p>
       <p>Tiempo en amarillo: ${parseFloat(document.getElementById(tiemposAmarillo).value)}s</p>
       <p>Tiempo en rojo: ${tiemposRojo}s</p>
       <p>Vehículos totales: ${stats.totalVehicles}</p>
       <p>Velocidad promedio: ${avgSpeed.toFixed(1)} px/frame</p>
-      <p>Veces en verde: ${stats.verde.count}</p>
-      <p>Veces en amarillo: ${stats.amarillo.count}</p>
-      <p>Veces en rojo: ${stats.rojo.count}</p>
     `;
+    
+    // Mostrar detalles de cada iteración en verde
+    resultsHTML += `<h4>&nbsp;&nbsp;&nbsp;&nbsp;Iteraciones en verde (${stats.verde.count}):</h4>`;
+    for (let i = 0; i < stats.verde.count; i++) {
+      const vehicles = stats.verde.vehiclesByIteration[i] || [];
+      resultsHTML += `<p>Iteración ${i+1}: ${vehicles.length} vehículos</p>`;
+    }
+    
+    // Mostrar detalles de cada iteración en amarillo
+    resultsHTML += `<h4>&nbsp;&nbsp;&nbsp;&nbsp;Iteraciones en amarillo (${stats.amarillo.count}):</h4>`;
+    for (let i = 0; i < stats.amarillo.count; i++) {
+      const vehicles = stats.amarillo.vehiclesByIteration[i] || [];
+      resultsHTML += `<p>Iteración ${i+1}: ${vehicles.length} vehículos</p>`;
+    }
+    
+    // Mostrar detalles de cada iteración en rojo
+    resultsHTML += `<h4>&nbsp;&nbsp;&nbsp;&nbsp;Iteraciones en rojo (${stats.rojo.count}):</h4>`;
+    for (let i = 0; i < stats.rojo.count; i++) {
+      const vehicles = stats.rojo.vehiclesByIteration[i] || [];
+      const stopped = stats.rojo.stoppedByIteration[i] || [];
+      resultsHTML += `<p>Iteración ${i+1}: ${vehicles.length} vehículos pasaron, ${stopped.length} vehículos detenidos</p>`;
+    }
   }
   
   // Botón para cerrar resultados
