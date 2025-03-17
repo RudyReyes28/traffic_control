@@ -444,6 +444,7 @@
         <input type="file" id="jsonInput" accept="application/json" style="margin: 10px 0;">
         <button id="loadJsonBtn">Simulación Manual</button>
         <button id="toggleModeBtn">Simulacion Automática</button>
+        <button id="end-auto-sim" style="display: none;">Terminar Simulación Automática</button>
       </div>
     </div>
     
@@ -711,9 +712,9 @@ function advancePhase() {
   currentPhaseIndex = (currentPhaseIndex + 1) % phaseSequence.length;
   currentPhase = phaseSequence[currentPhaseIndex];
 
-  if (manualMode) {
+  //if (manualMode) {
     recordSemaphoreChange(oldPhase, currentPhase);
-  }
+  //}
 
 
   updateSemaphores();
@@ -1128,7 +1129,7 @@ if (shouldStop && this.speed === 0) {
   }
 
 // Si estamos en modo manual y el vehículo está en la intersección pero aún no se ha contado
-if (manualMode && this.isInIntersection() && !this.countedForIntersection) {
+if (this.isInIntersection() && !this.countedForIntersection) {
     recordVehiclePassingThrough(this, this.lane);
     this.countedForIntersection = true; // Marcar como contado
   }
@@ -1165,7 +1166,7 @@ function modificarTamano(tipoVehiculo){
 
 // Arreglos para almacenar vehículos
 let vehicles = [];
-
+let vehiclesManual = [];
 // Función para generar vehículos en un carril específico
 function spawnVehicle(lane) {
   if (isPaused) return;
@@ -1225,7 +1226,10 @@ function animate() {
   // Eliminar vehículos que salieron del área de simulación
   vehicles = vehicles.filter(vehicle => !vehicle.isOutOfBounds());
   
-  checkAllVehiclesProcessed();
+  if (manualMode) {
+    checkAllVehiclesProcessed();
+  }
+  
 
   requestAnimationFrame(animate);
 }
@@ -1314,6 +1318,7 @@ function spawnVehicleFromJson(lane) {
   vehicle.idVia = data.id_via; 
   
   vehicles.push(vehicle);
+  vehiclesManual.push(vehicle);
 }
 
 
@@ -1409,18 +1414,31 @@ document.getElementById("loadJsonBtn").addEventListener("click", () => {
 });
 
 document.getElementById("toggleModeBtn").addEventListener("click", () => {
-  //manualMode = !manualMode;
   if (!manualMode) {
     resetSimulation();
     stopSpawnTimers();
     startSpawnTimers();
     updateSemaphores();
     phaseTimer = setTimeout(advancePhase, phases[currentPhase].duration);
-    //document.getElementById("toggleModeBtn").textContent = "Cambiar a Modo Manual";
+    startMonitoring(); // Inicia monitoreo para modo automático
+    document.getElementById("end-auto-sim").style.display = "block"; // Muestra el botón de finalización
   } else {
-
+    document.getElementById("end-auto-sim").style.display = "none"; // Oculta el botón en modo manual
   }
 });
+
+document.getElementById("end-auto-sim").addEventListener("click", () => {
+  if (!manualMode) {
+    // Detener la generación de vehículos
+    stopSpawnTimers();
+    // Pausar la simulación
+    isPaused = true;
+    btnToggleSim.textContent = 'Reanudar Simulación';
+    // Mostrar resultados
+    showSimulationResults();
+  }
+});
+
 //startSpawnTimers();
 //updateSemaphores();
 //setTimeout(advancePhase, phases[currentPhase].duration);
@@ -1678,6 +1696,7 @@ function resetMonitorData() {
 function showSimulationResults() {
   isPaused = true;
   //btnToggleSim.textContent = 'Reanudar Simulación';
+  const wasManualMode = manualMode;
   manualMode = false;
   monitorData.simulationEndTime = new Date();
   const totalTime = (monitorData.simulationEndTime - monitorData.simulationStartTime) / 1000;
@@ -1713,7 +1732,7 @@ function showSimulationResults() {
   let resultsHTML = `
     <h2>Resultados de la Simulación</h2>
     <h3>Información General</h3>
-    <p>Tipo de prueba: manual</p>
+    <p>Tipo de prueba: ${wasManualMode ? 'manual' : 'automática'}</p>
     <p>Fecha: ${formatDate(monitorData.simulationStartTime)}</p>
     <p>Hora inicio: ${startTime}</p>
     <p>Hora fin: ${endTime}</p>
