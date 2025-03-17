@@ -1,0 +1,193 @@
+CREATE TABLE IF NOT EXISTS TIPO_USUARIO (
+    id_tipo INT AUTO_INCREMENT PRIMARY KEY,
+    nombre_tipo VARCHAR(100) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS USUARIO (
+    ID INT AUTO_INCREMENT PRIMARY KEY,
+    Nombre VARCHAR(100) NOT NULL,
+    Apellido VARCHAR(100) NOT NULL,
+    nombre_usuario VARCHAR(100) NOT NULL UNIQUE,
+    contrasenia VARCHAR(255) NOT NULL,
+    rol INT,
+    CONSTRAINT fk_usuario_tipo FOREIGN KEY (rol) REFERENCES TIPO_USUARIO(id_tipo)
+) ;
+
+CREATE TABLE IF NOT EXISTS VIAS (
+    id_via INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    tipo VARCHAR(50) NOT NULL,
+    longitud DECIMAL(10,2),
+    inicio_via VARCHAR(100),
+    fin_via VARCHAR(100),
+    is_doble_sentido TINYINT(1) NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS VIA_ORIENTACION (
+    id_orientacion INT AUTO_INCREMENT PRIMARY KEY,
+    id_via INT NOT NULL,
+    orientacion_origen VARCHAR(50),
+    orientacion_destino VARCHAR(50),
+    CONSTRAINT fk_via_orientacion_via FOREIGN KEY (id_via) REFERENCES VIAS(id_via)
+) ;
+
+CREATE TABLE IF NOT EXISTS DETALLE_VIA_INTERSECCION (
+    id_detalle_via_interseccion INT AUTO_INCREMENT PRIMARY KEY,
+    id_via_interseccion_1 INT NOT NULL,
+    distancia_insterseccion_via1 DECIMAL(10,2),
+    id_via_inserseccion_2 INT NOT NULL,
+    distancia_interseccion_via2 DECIMAL(10,2),
+    CONSTRAINT fk_detalle_via_interseccion_via1 FOREIGN KEY (id_via_interseccion_1) REFERENCES VIAS(id_via),
+    CONSTRAINT fk_detalle_via_interseccion_via2 FOREIGN KEY (id_via_inserseccion_2) REFERENCES VIAS(id_via)
+) ;
+
+CREATE TABLE IF NOT EXISTS INTERSECCION (
+    id_interseccion INT AUTO_INCREMENT PRIMARY KEY,
+    descripcion TEXT,
+    id_detalle_via_interserccion INT,
+    CONSTRAINT fk_interseccion_detalle FOREIGN KEY (id_detalle_via_interserccion) REFERENCES DETALLE_VIA_INTERSECCION(id_detalle_via_interseccion)
+);
+
+CREATE TABLE IF NOT EXISTS SEMAFORO (
+    id_semaforo INT AUTO_INCREMENT PRIMARY KEY,
+    id_interseccion INT NOT NULL,
+    posicion_salida VARCHAR(50),
+    posicion_alto VARCHAR(50),
+    estado_operativo VARCHAR(50),
+    CONSTRAINT fk_semaforo_interseccion FOREIGN KEY (id_interseccion) REFERENCES INTERSECCION(id_interseccion)
+) ;
+
+CREATE TABLE IF NOT EXISTS PRUEBA (
+    id_prueba INT AUTO_INCREMENT PRIMARY KEY,
+    id_usuario_prueba INT NOT NULL,
+    tipo_prueba VARCHAR(50),
+    fecha_prueba DATE,
+    hora_inicio TIME,
+    hora_fin TIME,
+    CONSTRAINT fk_prueba_usuario FOREIGN KEY (id_usuario_prueba) REFERENCES USUARIO(ID)
+);
+
+CREATE TABLE IF NOT EXISTS DATOS_VEHICULO_PRUEBA (
+    id_vehiculo_prueba INT AUTO_INCREMENT PRIMARY KEY,
+    id_prueba INT NOT NULL,
+    marca VARCHAR(100),
+    tipo_vehiculo VARCHAR(50),
+    velocidad DECIMAL(10,2),
+    origen VARCHAR(100),
+    destino VARCHAR(100),
+    CONSTRAINT fk_datos_vehiculo_prueba_prueba FOREIGN KEY (id_prueba) REFERENCES PRUEBA(id_prueba)
+);
+CREATE TABLE IF NOT EXISTS ITERACION_PRUEBA(
+	id_iteracion_prueba INT AUTO_INCREMENT PRIMARY KEY,
+	iteracion INT,
+	id_prueba INT NOT NULL,
+    comentario VARCHAR(100),
+	CONSTRAINT fk_id_iteracion_prueba FOREIGN KEY (id_prueba) REFERENCES PRUEBA(id_prueba)
+);
+
+CREATE TABLE IF NOT EXISTS DATOS_SEMAFORO_ITERACION_PRUEBA (
+    id_datos_semaforo_prueba INT AUTO_INCREMENT PRIMARY KEY,
+    id_iteracion_prueba INT NOT NULL,
+    id_semaforo INT NOT NULL,
+    tiempo_verde INT,
+    tiempo_rojo INT,
+    tiempo_amarillo INT,
+    CONSTRAINT fk_datos_semaforo_prueba_iteracion FOREIGN KEY (id_iteracion_prueba) REFERENCES ITERACION_PRUEBA(id_iteracion_prueba),
+    CONSTRAINT fk_datos_semaforo_prueba_semaforo FOREIGN KEY (id_semaforo) REFERENCES SEMAFORO(id_semaforo)
+);
+
+
+CREATE TABLE IF NOT EXISTS RESULTADOS_PRUEBA_ITERACION (
+    id_resultado INT AUTO_INCREMENT PRIMARY KEY,
+    id_iteracion_prueba INT NOT NULL,
+    tiempo_prueba INT,
+    CONSTRAINT fk_resultados_prueba_iteracion FOREIGN KEY (id_iteracion_prueba) REFERENCES ITERACION_PRUEBA(id_iteracion_prueba)
+);
+
+CREATE TABLE IF NOT EXISTS RESULTADO_MONITOREO_SEMAFORO (
+    id_resultado_monitoreo INT AUTO_INCREMENT PRIMARY KEY,
+    id_resultado INT NOT NULL,
+    id_datos_semaforo_prueba INT NOT NULL,
+    cantidad_vehiculos_total INT,
+    velocidad_promedio DECIMAL(10,2),
+    cantidad_veces_verde INT,
+    cantidad_veces_amarillo INT,
+    cantidad_veces_rojo INT,
+    CONSTRAINT fk_resultado_monitoreo_resultado FOREIGN KEY (id_resultado) REFERENCES RESULTADOS_PRUEBA_ITERACION(id_resultado),
+    CONSTRAINT fk_resultado_monitoreo_datos_semaforo FOREIGN KEY (id_datos_semaforo_prueba) REFERENCES DATOS_SEMAFORO_ITERACION_PRUEBA(id_datos_semaforo_prueba)
+) ;
+
+CREATE TABLE IF NOT EXISTS RESULTADO_ITERACION_SEMAFORO_VERDE (
+    id_resultado_iteracion_verde INT AUTO_INCREMENT PRIMARY KEY,
+    id_resultado_monitoreo INT NOT NULL,
+    cantidad_vehiculos INT,
+    CONSTRAINT fk_iteracion_verde_monitoreo FOREIGN KEY (id_resultado_monitoreo) REFERENCES RESULTADO_MONITOREO_SEMAFORO(id_resultado_monitoreo)
+) ;
+
+CREATE TABLE IF NOT EXISTS RESULTADO_ITERACION_SEMAFORO_AMARILLO (
+    id_resultado_iteracion_amarillo INT AUTO_INCREMENT PRIMARY KEY,
+    id_resultado_monitoreo INT NOT NULL,
+    cantidad_vehiculos INT,
+    CONSTRAINT fk_iteracion_amarillo_monitoreo FOREIGN KEY (id_resultado_monitoreo) REFERENCES RESULTADO_MONITOREO_SEMAFORO(id_resultado_monitoreo)
+);
+
+CREATE TABLE IF NOT EXISTS RESULTADO_ITERACION_SEMAFORO_ROJO (
+    id_resultado_iteracion_rojo INT AUTO_INCREMENT PRIMARY KEY,
+    id_resultado_monitoreo INT NOT NULL,
+    cantidad_vehiculos_detenidos INT,
+    CONSTRAINT fk_iteracion_rojo_monitoreo FOREIGN KEY (id_resultado_monitoreo) REFERENCES RESULTADO_MONITOREO_SEMAFORO(id_resultado_monitoreo)
+) ;
+
+CREATE TABLE IF NOT EXISTS DETALLE_VEHICULO_ITERACION_SEMAFORO_VERDE (
+    id_vehiculo_monitoreo_semaforo_verde INT AUTO_INCREMENT PRIMARY KEY,
+    id_resultado_iteracion_verde INT NOT NULL,
+    id_vehiculo_prueba INT NOT NULL,
+    hora_cruce TIME,
+    CONSTRAINT fk_detalle_iteracion_verde_iteracion FOREIGN KEY (id_resultado_iteracion_verde) REFERENCES RESULTADO_ITERACION_SEMAFORO_VERDE(id_resultado_iteracion_verde),
+    CONSTRAINT fk_detalle_iteracion_verde_vehiculo FOREIGN KEY (id_vehiculo_prueba) REFERENCES DATOS_VEHICULO_PRUEBA(id_vehiculo_prueba)
+);
+
+CREATE TABLE IF NOT EXISTS DETALLE_VEHICULO_ITERACION_SEMAFORO_AMARILLO (
+    id_vehiculo_monitoreo_semaforo_amarillo INT AUTO_INCREMENT PRIMARY KEY,
+    id_resultado_iteracion_amarillo INT NOT NULL,
+    id_vehiculo_prueba INT NOT NULL,
+    hora_cruce TIME,
+    CONSTRAINT fk_detalle_iteracion_amarillo_iteracion FOREIGN KEY (id_resultado_iteracion_amarillo) REFERENCES RESULTADO_ITERACION_SEMAFORO_AMARILLO(id_resultado_iteracion_amarillo),
+    CONSTRAINT fk_detalle_iteracion_amarillo_vehiculo FOREIGN KEY (id_vehiculo_prueba) REFERENCES DATOS_VEHICULO_PRUEBA(id_vehiculo_prueba)
+);
+
+
+USE monitoreo_trafico;
+
+INSERT INTO  tipo_usuario(nombre_tipo) VALUES 
+("administrador"), 
+("usuario_monitor"),
+("usuario_supervisor");
+
+
+INSERT INTO usuario(Nombre, Apellido, nombre_usuario, contrasenia, rol) VALUES 
+("Carlos", "Herrera", "admin", "$2y$10$dqw/0YN7MrVvwK0mVMx3Qu9ZhE0YT8twlCKJQi7jRHlmNa47NUP9.", 1),
+("Juan", "Dominguez", "monitor1", "$2y$10$LM7tdqXnBwPOK3xo3GPl0uX0q9KN42oVDW.wtOUXp0nNBJBYfh8a.", 2),
+("Maria", "Reyes","supervisor1", "$2y$10$Sh4V.ciRn2yptv56LsZKL.zDcCOSm7n9dZPRQulHr5EPz0y0XfxZ6", 3);
+
+
+-- SELECT * FROM tipo_usuario;
+
+-- SELECT * FROM usuario;
+
+INSERT INTO VIAS(nombre, tipo, longitud,inicio_via, fin_via, is_doble_sentido) VALUES 
+("calle robles", "calle", 10, "a", "b",1),
+("avenidad la calzada", "avenida", 15, "c", "d",1);
+
+INSERT INTO DETALLE_VIA_INTERSECCION(id_via_interseccion_1, distancia_insterseccion_via1, id_via_inserseccion_2, distancia_interseccion_via2) VALUES 
+(1,5,2,7.5);
+
+-- SELECT * FROM DETALLE_VIA_INTERSECCION;
+
+INSERT INTO INTERSECCION(descripcion, id_detalle_via_interserccion) VALUES 
+("Interseccion entre la calle robles y la avenida la calzada ",1);
+
+INSERT INTO SEMAFORO(id_interseccion, posicion_salida, posicion_alto, estado_operativo) VALUES
+(1, "a","b","En Operacion"),(1, "b","a","En Operacion"),(1, "c","d","En Operacion"),(1, "d","c","En Operacion");
+
+-- SELECT * FROM semaforo;
