@@ -17,8 +17,11 @@
     
     // Si se solicita un informe detallado
     $informeDetallado = null;
+    $resumenPrueba = null;
+    $estadisticasSemaforos = null;
     if(isset($_GET['id_prueba'])) {
-        $informeDetallado = $reportesModel->getInformeDetallado($_GET['id_prueba']);
+        $resumenPrueba = $reportesModel->getResumenPrueba($_GET['id_prueba']);
+        $estadisticasSemaforos = $reportesModel->getEstadisticasSemaforos($_GET['id_prueba']);
     }
     
     // Cerrar la conexión
@@ -345,6 +348,7 @@
                                             <tr>
                                                 <th>Monitor</th>
                                                 <th>ID Prueba</th>
+                                                <th>Tipo De Prueba</th>
                                                 <th>Fecha</th>
                                                 <th>Hora Inicio</th>
                                                 <th>Hora Fin</th>
@@ -358,6 +362,7 @@
                                             <tr>
                                                 <td><?php echo $item['nombre_monitor'] . ' ' . $item['apellido_monitor']; ?></td>
                                                 <td><?php echo $item['id_prueba']; ?></td>
+                                                <td><?php echo $item['tipo_prueba'] ?></td>
                                                 <td><?php echo $item['fecha_prueba']; ?></td>
                                                 <td><?php echo $item['hora_inicio']; ?></td>
                                                 <td><?php echo $item['hora_fin']; ?></td>
@@ -470,7 +475,7 @@
                                                 <th>Vehículos en Verde</th>
                                                 <th>Vehículos en Amarillo</th>
                                                 <th>Vehículos Detenidos</th>
-                                                <th>Tiempos Semáforo (V/A/R)</th>
+                                                <th>Tiempos Semáforo Promedio(V/A/R)</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -506,182 +511,152 @@
 
             <!-- 4. Informe Detallado -->
             <div class="tab-pane fade" id="informe" role="tabpanel" aria-labelledby="informe-tab">
-                <div class="row">
-                    <div class="col-md-12">
-                        <div class="card mb-4">
-                            <div class="card-header">
-                                <i class="fas fa-file-alt me-1"></i> Generación de Informes Detallados
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-file-alt me-1"></i> Generación de Informes Detallados
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <i class="fas fa-search me-1"></i> Seleccionar Prueba
+                                </div>
+                                <div class="card-body">
+                                    <form action="home_supervisor.php" method="GET">
+                                        <div class="mb-3">
+                                            <label for="id_prueba" class="form-label">Seleccione una prueba:</label>
+                                            <select class="form-select" id="id_prueba" name="id_prueba" required>
+                                                <option value="">-- Seleccione una prueba --</option>
+                                                <?php foreach ($listaPruebas as $prueba): ?>
+                                                <option value="<?php echo $prueba['id_prueba']; ?>" <?php echo (isset($_GET['id_prueba']) && $_GET['id_prueba'] == $prueba['id_prueba']) ? 'selected' : ''; ?>>
+                                                    Prueba #<?php echo $prueba['id_prueba']; ?> - <?php echo $prueba['fecha_prueba']; ?> - <?php echo $prueba['monitor']; ?> (<?php echo $prueba['total_iteraciones']; ?> iteraciones)
+                                                </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-search me-1"></i> Generar Informe
+                                        </button>
+                                    </form>
+                                </div>
                             </div>
-                            <div class="card-body">
-                                <div class="row mb-4">
-                                    <div class="col-md-6">
-                                        <div class="card">
-                                            <div class="card-header">
-                                                <i class="fas fa-search me-1"></i> Seleccionar Prueba
-                                            </div>
-                                            <div class="card-body">
-                                                <form action="home_supervisor.php" method="GET">
-                                                    <div class="mb-3">
-                                                        <label for="id_prueba" class="form-label">Seleccione una prueba:</label>
-                                                        <select class="form-select" id="id_prueba" name="id_prueba" required>
-                                                            <option value="">-- Seleccione una prueba --</option>
-                                                            <?php foreach ($listaPruebas as $prueba): ?>
-                                                            <option value="<?php echo $prueba['id_prueba']; ?>" <?php echo (isset($_GET['id_prueba']) && $_GET['id_prueba'] == $prueba['id_prueba']) ? 'selected' : ''; ?>>
-                                                                Prueba #<?php echo $prueba['id_prueba']; ?> - <?php echo $prueba['fecha_prueba']; ?> - <?php echo $prueba['monitor']; ?> (<?php echo $prueba['total_iteraciones']; ?> iteraciones)
-                                                            </option>
-                                                            <?php endforeach; ?>
-                                                        </select>
-                                                    </div>
-                                                    <button type="submit" class="btn btn-primary">
-                                                        <i class="fas fa-search me-1"></i> Generar Informe
-                                                    </button>
-                                                    <?php if (isset($_GET['id_prueba'])): ?>
-                                                    <a href="export_informe.php?id_prueba=<?php echo $_GET['id_prueba']; ?>" class="btn btn-success ms-2">
-                                                        <i class="fas fa-file-excel me-1"></i> Exportar a Excel
-                                                    </a>
-                                                    <a href="export_pdf.php?id_prueba=<?php echo $_GET['id_prueba']; ?>" class="btn btn-danger ms-2">
-                                                        <i class="fas fa-file-pdf me-1"></i> Exportar a PDF
-                                                    </a>
-                                                    <?php endif; ?>
-                                                </form>
-                                            </div>
+                        </div>
+                        
+                        <?php if (isset($_GET['id_prueba']) && !empty($resumenPrueba)): ?>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <i class="fas fa-info-circle me-1"></i> Información General
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <p><strong>Tipo de prueba:</strong> <?php echo $resumenPrueba['tipo_prueba']; ?></p>
+                                            <p><strong>Comentarios:</strong> <?php echo $resumenPrueba['comentario']; ?></p>
+                                            <p><strong>Fecha:</strong> <?php echo $resumenPrueba['fecha_prueba']; ?></p>
                                         </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <?php if (isset($_GET['id_prueba']) && !empty($informeDetallado)): ?>
-                                        <div class="card">
-                                            <div class="card-header">
-                                                <i class="fas fa-info-circle me-1"></i> Resumen de la Prueba
-                                            </div>
-                                            <div class="card-body">
-                                                <div class="row">
-                                                    <div class="col-md-6">
-                                                        <p><strong>ID Prueba:</strong> <?php echo $informeDetallado[0]['id_prueba']; ?></p>
-                                                        <p><strong>Fecha:</strong> <?php echo $informeDetallado[0]['fecha_prueba']; ?></p>
-                                                        <p><strong>Hora Inicio:</strong> <?php echo $informeDetallado[0]['hora_inicio']; ?></p>
-                                                        <p><strong>Hora Fin:</strong> <?php echo $informeDetallado[0]['hora_fin']; ?></p>
-                                                    </div>
-                                                    <div class="col-md-6">
-                                                        <p><strong>Monitor:</strong> <?php echo $informeDetallado[0]['monitor']; ?></p>
-                                                        <p><strong>Total Iteraciones:</strong> <?php echo count(array_unique(array_column($informeDetallado, 'iteracion'))); ?></p>
-                                                        <p><strong>Total Semáforos:</strong> <?php echo count(array_unique(array_column($informeDetallado, 'id_semaforo'))); ?></p>
-                                                        <p><strong>Total Vehículos:</strong> <?php echo array_sum(array_column($informeDetallado, 'cantidad_vehiculos_total')); ?></p>
-                                                    </div>
-                                                </div>
-                                            </div>
+                                        <div class="col-md-6">
+                                            <p><strong>Hora inicio:</strong> <?php echo $resumenPrueba['hora_inicio']; ?></p>
+                                            <p><strong>Hora fin:</strong> <?php echo $resumenPrueba['hora_fin']; ?></p>
+                                            <p><strong>Tiempo total:</strong> <?php echo $resumenPrueba['tiempo_total']; ?> segundos</p>
                                         </div>
-                                        <?php endif; ?>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                    </div>
 
-                                <?php if (isset($_GET['id_prueba']) && !empty($informeDetallado)): ?>
-                                <div class="card mb-4">
-                                    <div class="card-header">
-                                        <i class="fas fa-table me-1"></i> Resultados Detallados de la Prueba #<?php echo $_GET['id_prueba']; ?>
-                                    </div>
-                                    <div class="card-body">
-                                        <ul class="nav nav-tabs" id="iteracionTabs" role="tablist">
-                                            <?php 
-                                            $iteraciones = array_unique(array_column($informeDetallado, 'iteracion'));
-                                            foreach ($iteraciones as $index => $iteracion):
-                                            ?>
-                                            <li class="nav-item" role="presentation">
-                                                <button class="nav-link <?php echo $index === 0 ? 'active' : ''; ?>" 
-                                                        id="iteracion-<?php echo $iteracion; ?>-tab" 
-                                                        data-bs-toggle="tab" 
-                                                        data-bs-target="#iteracion-<?php echo $iteracion; ?>" 
-                                                        type="button" 
-                                                        role="tab">
-                                                    Iteración <?php echo $iteracion; ?>
-                                                </button>
-                                            </li>
-                                            <?php endforeach; ?>
-                                        </ul>
-                                        <div class="tab-content" id="iteracionTabContent">
-                                            <?php foreach ($iteraciones as $index => $iteracion): ?>
-                                            <div class="tab-pane fade <?php echo $index === 0 ? 'show active' : ''; ?>" 
-                                                 id="iteracion-<?php echo $iteracion; ?>" 
-                                                 role="tabpanel">
-                                                
-                                                <?php 
-                                                $iteracionData = array_filter($informeDetallado, function($item) use ($iteracion) {
-                                                    return $item['iteracion'] == $iteracion;
-                                                });
-                                                $comentario = reset($iteracionData)['comentario'];
-                                                ?>
-                                                
-                                                <div class="alert alert-info mt-3">
-                                                    <strong>Comentario:</strong> <?php echo empty($comentario) ? 'Sin comentarios' : $comentario; ?>
+                    <?php if (isset($_GET['id_prueba']) && !empty($estadisticasSemaforos)): ?>
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <i class="fas fa-traffic-light me-1"></i> Estadísticas por Semáforo
+                        </div>
+                        <div class="card-body">
+                            <div class="accordion" id="semaforosAccordion">
+                                <?php foreach ($estadisticasSemaforos as $index => $semaforo): ?>
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header" id="heading<?php echo $semaforo['id_semaforo']; ?>">
+                                        <button class="accordion-button <?php echo $index === 0 ? '' : 'collapsed'; ?>" type="button" data-bs-toggle="collapse" data-bs-target="#collapse<?php echo $semaforo['id_semaforo']; ?>" aria-expanded="<?php echo $index === 0 ? 'true' : 'false'; ?>" aria-controls="collapse<?php echo $semaforo['id_semaforo']; ?>">
+                                            Semáforo <?php echo $semaforo['descripcion']; ?>
+                                        </button>
+                                    </h2>
+                                    <div id="collapse<?php echo $semaforo['id_semaforo']; ?>" class="accordion-collapse collapse <?php echo $index === 0 ? 'show' : ''; ?>" aria-labelledby="heading<?php echo $semaforo['id_semaforo']; ?>" data-bs-parent="#semaforosAccordion">
+                                        <div class="accordion-body">
+                                            <div class="row mb-4">
+                                                <div class="col-md-3">
+                                                    <p><strong>Tiempo en verde:</strong> <?php echo $semaforo['tiempo_verde']; ?>s</p>
                                                 </div>
-                                                
-                                                <div class="table-responsive">
-                                                    <table class="table table-striped table-hover">
-                                                        <thead class="table-primary">
-                                                            <tr>
-                                                                <th>Semáforo</th>
-                                                                <th>Intersección</th>
-                                                                <th>Tiempo Verde (s)</th>
-                                                                <th>Tiempo Amarillo (s)</th>
-                                                                <th>Tiempo Rojo (s)</th>
-                                                                <th>Vehículos Total</th>
-                                                                <th>Velocidad Promedio</th>
-                                                                <th>Vehículos en Verde</th>
-                                                                <th>Vehículos en Amarillo</th>
-                                                                <th>Vehículos Detenidos</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            <?php foreach ($iteracionData as $item): ?>
-                                                            <tr>
-                                                                <td><?php echo $item['id_semaforo']; ?></td>
-                                                                <td><?php echo $item['interseccion']; ?></td>
-                                                                <td><?php echo $item['tiempo_verde']; ?></td>
-                                                                <td><?php echo $item['tiempo_amarillo']; ?></td>
-                                                                <td><?php echo $item['tiempo_rojo']; ?></td>
-                                                                <td><?php echo $item['cantidad_vehiculos_total']; ?></td>
-                                                                <td><?php echo number_format($item['velocidad_promedio'], 1); ?> km/h</td>
-                                                                <td><?php echo $item['vehiculos_verde']; ?></td>
-                                                                <td><?php echo $item['vehiculos_amarillo']; ?></td>
-                                                                <td><?php echo $item['vehiculos_detenidos']; ?></td>
-                                                            </tr>
+                                                <div class="col-md-3">
+                                                    <p><strong>Tiempo en amarillo:</strong> <?php echo $semaforo['tiempo_amarillo']; ?>s</p>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <p><strong>Tiempo en rojo:</strong> <?php echo $semaforo['tiempo_rojo']; ?>s</p>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <p><strong>Vehículos totales:</strong> <?php echo $semaforo['cantidad_vehiculos_total']; ?></p>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <p><strong>Velocidad promedio:</strong> <?php echo number_format($semaforo['velocidad_promedio'], 1); ?></p>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="row">
+                                                <div class="col-md-4">
+                                                    <div class="card mb-3">
+                                                        <div class="card-header bg-success text-white">
+                                                            <i class="fas fa-check-circle me-1"></i> Iteraciones en verde (<?php echo $semaforo['cantidad_veces_verde']; ?>)
+                                                        </div>
+                                                        <div class="card-body">
+                                                            <?php foreach ($semaforo['iteraciones_verde'] as $iteracion): ?>
+                                                            <p>Iteración <?php echo $iteracion['iteracion']; ?>: <?php echo $iteracion['vehiculos']; ?> vehículos</p>
                                                             <?php endforeach; ?>
-                                                        </tbody>
-                                                    </table>
-                                                </div>
-                                                
-                                                <div class="row mt-4">
-                                                    <div class="col-md-6">
-                                                        <div class="card">
-                                                            <div class="card-header">
-                                                                <i class="fas fa-chart-pie me-1"></i> Distribución de Vehículos - Iteración <?php echo $iteracion; ?>
-                                                            </div>
-                                                            <div class="card-body">
-                                                                <canvas id="distribucionVehiculosIteracion<?php echo $iteracion; ?>"></canvas>
-                                                            </div>
                                                         </div>
                                                     </div>
-                                                    <div class="col-md-6">
-                                                        <div class="card">
-                                                            <div class="card-header">
-                                                                <i class="fas fa-chart-bar me-1"></i> Tiempos de Semáforos - Iteración <?php echo $iteracion; ?>
-                                                            </div>
-                                                            <div class="card-body">
-                                                                <canvas id="tiempoSemaforosIteracion<?php echo $iteracion; ?>"></canvas>
-                                                            </div>
+                                                </div>
+                                                
+                                                <div class="col-md-4">
+                                                    <div class="card mb-3">
+                                                        <div class="card-header bg-warning text-dark">
+                                                            <i class="fas fa-exclamation-triangle me-1"></i> Iteraciones en amarillo (<?php echo $semaforo['cantidad_veces_amarillo']; ?>)
+                                                        </div>
+                                                        <div class="card-body">
+                                                            <?php foreach ($semaforo['iteraciones_amarillo'] as $iteracion): ?>
+                                                            <p>Iteración <?php echo $iteracion['iteracion']; ?>: <?php echo $iteracion['vehiculos']; ?> vehículos</p>
+                                                            <?php endforeach; ?>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="col-md-4">
+                                                    <div class="card mb-3">
+                                                        <div class="card-header bg-danger text-white">
+                                                            <i class="fas fa-times-circle me-1"></i> Iteraciones en rojo (<?php echo $semaforo['cantidad_veces_rojo']; ?>)
+                                                        </div>
+                                                        <div class="card-body">
+                                                            <?php foreach ($semaforo['iteraciones_rojo'] as $iteracion): ?>
+                                                            <p>Iteración <?php echo $iteracion['iteracion']; ?>: 0 vehículos pasaron, <?php echo $iteracion['vehiculos_detenidos']; ?> vehículos detenidos</p>
+                                                            <?php endforeach; ?>
                                                         </div>
                                                     </div>
                                                 </div>
                                             </div>
-                                            <?php endforeach; ?>
                                         </div>
                                     </div>
                                 </div>
-                                <?php endif; ?>
+                                <?php endforeach; ?>
                             </div>
                         </div>
                     </div>
+                    <?php endif; ?>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
 
             <!-- 5. Estadísticas por Tipo de Vehículo -->
             <div class="tab-pane fade" id="tipoVehiculo" role="tabpanel" aria-labelledby="tipoVehiculo-tab">
