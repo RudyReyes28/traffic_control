@@ -371,6 +371,56 @@
       0%, 49% { opacity: 0; }
       50%, 100% { opacity: 1; }
     }
+
+    .semaphore-label {
+      position: absolute;
+      background-color: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      z-index: 110;
+      text-align: center;
+      width: auto;
+      white-space: nowrap;  
+    }
+
+    #label-right {
+      top: 270px;
+      left: 120px;
+    }
+
+    #label-left {
+      top: 510px;
+      left: 540px;
+    }
+
+    #label-down {
+      top: 180px;
+      left: 510px;
+    }
+
+    #label-up {
+      top: 580px;
+      left: 180px;
+    }
+
+    #label-right::before {
+      content: "→ ";
+    }
+
+    #label-left::before {
+      content: "← ";
+    }
+
+    #label-down::before {
+      content: "↓ ";
+    }
+
+    #label-up::before {
+      content: "↑ ";
+    }
+
   </style>
 </head>
 <body>
@@ -515,6 +565,11 @@
         <div id="semaphore-up-yellow" class="semaphore-light yellow"></div>
         <div id="semaphore-up-green" class="semaphore-light green"></div>
       </div>
+
+      <div id="label-right" class="semaphore-label">Semáforo Derecho</div>
+      <div id="label-left" class="semaphore-label">Semáforo Izquierdo</div>
+      <div id="label-down" class="semaphore-label">Semáforo Abajo</div>
+      <div id="label-up" class="semaphore-label">Semáforo Arriba</div>
     </div>
   </div>
   
@@ -801,25 +856,25 @@ class Vehicle {
     
     // Posición inicial y orientación según el carril
     if (lane === 'right') {
-      this.x = -50;
+      this.x = -50 - (this.width-40); // Ajustado para estar en el carril inferior
       this.y = 440; // Ajustado para estar en el carril inferior
       this.stopLine = 280;
       this.rotation = 0; // 0 grados, hacia la derecha
     } else if (lane === 'left') {
-      this.x = 850;
+      this.x = 850 + (this.width-40); // Ajustado para estar en el carril superior;
       this.y = 340; // Ajustado para estar en el carril superior
       this.stopLine = 520;
       this.rotation = 180; // 180 grados, hacia la izquierda
     } else if (lane === 'down') {
       this.x = 340;
-      this.y = -50;
+      this.y = -50 - (this.width-40); // Ajustado para estar en el carril izquierdo
       this.stopLine = 280;
       this.rotation = 90; // 90 grados, hacia abajo
       // Intercambiar ancho y alto para orientación vertical
       [this.width, this.height] = [this.height, this.width];
     } else if (lane === 'up') {
       this.x = 440;
-      this.y = 850;
+      this.y = 850 + (this.width-40); // Ajustado para estar en el carril derecho
       this.stopLine = 520;
       this.rotation = 270; // 270 grados, hacia arriba
       // Intercambiar ancho y alto para orientación vertical
@@ -1150,21 +1205,21 @@ this.updatePosition();
 
 // Verificar si el vehículo está fuera del área de simulación
 isOutOfBounds() {
-  if (this.lane === 'right' && this.x > 850) return true;
-  if (this.lane === 'left' && this.x < -50) return true;
-  if (this.lane === 'down' && this.y > 850) return true;
-  if (this.lane === 'up' && this.y < -50) return true;
+  if (this.lane === 'right' && this.x - (this.width-30) > 850) return true;
+  if (this.lane === 'left' && this.x + (this.width-30) < -50) return true;
+  if (this.lane === 'down' && this.y - (this.width-30) > 850) return true;
+  if (this.lane === 'up' && this.y + (this.width-30) < -50) return true;
   return false;
 }
 }
 
 
 function modificarTamano(tipoVehiculo){
-  if (tipoVehiculo === "carro") return 40;
-  if (tipoVehiculo === "moto") return 32;
-  if (tipoVehiculo === "trailer") return 50;
-  if (tipoVehiculo === "microbus") return 43;
-  if (tipoVehiculo === "camioneta") return 47;
+  if (tipoVehiculo === "carro") return 37;
+  if (tipoVehiculo === "moto") return 30;
+  if (tipoVehiculo === "trailer") return 60;
+  if (tipoVehiculo === "microbus") return 50;
+  if (tipoVehiculo === "camioneta") return 55;
   return 40; // Valor por defecto
 }
 
@@ -1174,9 +1229,32 @@ let vehiclesManual = [];
 // Función para generar vehículos en un carril específico
 function spawnVehicle(lane) {
   if (isPaused) return;
-  
-  let vehicle = new Vehicle(lane, null, 40, 0);
+
+  let tipoVehiculo = vehicleTypeRandom();
+
+  let vehicle = new Vehicle(lane, null, modificarTamano(tipoVehiculo), 0);
+  vehicle.tipoVehiculo = tipoVehiculo;
+  vehicle.maxSpeed = speedForTypeVehicle(vehicle.tipoVehiculo);
   vehicles.push(vehicle);
+}
+
+function vehicleTypeRandom(){
+  let tipoVehiculo = Math.floor(Math.random() * 5);
+  if (tipoVehiculo === 0) return "carro";
+  if (tipoVehiculo === 1) return "moto";
+  if (tipoVehiculo === 2) return "trailer";
+  if (tipoVehiculo === 3) return "microbus";
+  if (tipoVehiculo === 4) return "camioneta";
+  return "carro"; // Valor por defecto
+}
+
+function speedForTypeVehicle(tipoVehiculo){
+  if (tipoVehiculo === "carro") return 2.5;
+  if (tipoVehiculo === "moto") return 3;
+  if (tipoVehiculo === "trailer") return 0.7;
+  if (tipoVehiculo === "microbus") return 1.5;
+  if (tipoVehiculo === "camioneta") return 1;
+  return 2; // Valor por defecto
 }
 
 // Temporizadores para generar vehículos
@@ -1273,7 +1351,7 @@ function determineLane(origen, destino) {
   if (origen === "d" && destino === "a") return "up";
   if (origen === "d" && destino === "b") return "up";
   
-  // Para combinaciones (por ejemplo: a->c, etc.) se puede extender esta lógica
+  // Para combinaciones (por ejemplo: a->c, etc)
   return "right"; // Valor por defecto
 }
 

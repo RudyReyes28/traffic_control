@@ -24,6 +24,9 @@
         .icon-large {
             font-size: 3rem;
         }
+        .modal-lg {
+            max-width: 80%;
+        }
     </style>
 </head>
 <body>
@@ -79,7 +82,7 @@
                         <h5 class="card-title mt-3">Usuarios</h5>
                         <p class="card-text">Gestione los usuarios del sistema.</p>
                         <a href="add_user_form.php" class="btn btn-primary">Agregar Usuario</a>
-                        <!-- <a href="../usuario/listar_usuarios.php" class="btn btn-outline-primary mt-2">Ver Usuarios</a> -->
+                        <button class="btn btn-outline-primary mt-2" data-bs-toggle="modal" data-bs-target="#usuariosModal">Ver Usuarios</button>
                     </div>
                 </div>
             </div>
@@ -91,7 +94,7 @@
                         <h5 class="card-title mt-3">Vías</h5>
                         <p class="card-text">Gestione las calles y avenidas del sistema.</p>
                         <a href="add_via_form.php" class="btn btn-success">Agregar Vía</a>
-                        <!-- <a href="../vias/listar_vias.php" class="btn btn-outline-success mt-2">Ver Vías</a> -->
+                        <button class="btn btn-outline-success mt-2" data-bs-toggle="modal" data-bs-target="#viasModal">Ver Vías</button>
                     </div>
                 </div>
             </div>
@@ -103,7 +106,7 @@
                         <h5 class="card-title mt-3">Intersecciones</h5>
                         <p class="card-text">Gestione las intersecciones de vías.</p>
                         <a href="add_intersection_form.php" class="btn btn-info">Agregar Intersección</a>
-                        <!-- <a href="../interseccion/listar_intersecciones.php" class="btn btn-outline-info mt-2">Ver Intersecciones</a> -->
+                        <button class="btn btn-outline-info mt-2" data-bs-toggle="modal" data-bs-target="#interseccionesModal">Ver Intersecciones</button>
                     </div>
                 </div>
             </div>
@@ -115,7 +118,7 @@
                         <h5 class="card-title mt-3">Semáforos</h5>
                         <p class="card-text">Gestione los semáforos del sistema.</p>
                         <a href="add_traffic_ligth_form.php" class="btn btn-warning">Agregar Semáforo</a>
-                        <!-- <a href="../semaforo/listar_semaforos.php" class="btn btn-outline-warning mt-2">Ver Semáforos</a> -->
+                        <button class="btn btn-outline-warning mt-2" data-bs-toggle="modal" data-bs-target="#semaforosModal">Ver Semáforos</button>
                     </div>
                 </div>
             </div>
@@ -265,6 +268,174 @@
                             </tbody>
                         </table>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Usuarios -->
+    <div class="modal fade" id="usuariosModal" tabindex="-1" aria-labelledby="usuariosModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="usuariosModalLabel">Lista de Usuarios</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nombre</th>
+                                    <th>Apellido</th>
+                                    <th>Usuario</th>
+                                    <th>Rol</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach($usuarios as $usuario): ?>
+                                <tr>
+                                    <td><?php echo $usuario['ID']; ?></td>
+                                    <td><?php echo $usuario['Nombre']; ?></td>
+                                    <td><?php echo $usuario['Apellido']; ?></td>
+                                    <td><?php echo $usuario['nombre_usuario']; ?></td>
+                                    <td><?php echo $usuario['nombre_tipo']; ?></td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Vías -->
+    <div class="modal fade" id="viasModal" tabindex="-1" aria-labelledby="viasModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="viasModalLabel">Lista de Vías</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nombre</th>
+                                    <th>Tipo</th>
+                                    <th>Inicio de Via</th>
+                                    <th>Fin de Via</th>
+                                    <th>Longitud</th>
+                                    <th>Doble sentido</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach($vias as $via): ?>
+                                <tr>
+                                    <td><?php echo $via['id_via']; ?></td>
+                                    <td><?php echo $via['nombre']; ?></td>
+                                    <td><?php echo $via['tipo']; ?></td>
+                                    <td><?php echo $via['inicio_via']; ?></td>
+                                    <td><?php echo $via['fin_via']; ?></td>
+                                    <td><?php echo $via['longitud']; ?> km</td>
+                                    <td><?php echo $via['is_doble_sentido'] == 1 ? 'Sí' : 'No'; ?></td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Intersecciones -->
+    <div class="modal fade" id="interseccionesModal" tabindex="-1" aria-labelledby="interseccionesModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title" id="interseccionesModalLabel">Lista de Intersecciones</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Descripción</th>
+                                    <th>Vía 1</th>
+                                    <th>Vía 2</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach($intersecciones as $interseccion): ?>
+                                <tr>
+                                    <td><?php echo $interseccion['id_interseccion']; ?></td>
+                                    <td><?php echo $interseccion['descripcion']; ?></td>
+                                    <td><?php echo $interseccion['via1_nombre']; ?></td>
+                                    <td><?php echo $interseccion['via2_nombre']; ?></td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Semáforos -->
+    <div class="modal fade" id="semaforosModal" tabindex="-1" aria-labelledby="semaforosModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title" id="semaforosModalLabel">Lista de Semáforos</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Intersección</th>
+                                    <th>Posición</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach($semaforos as $semaforo): ?>
+                                <tr>
+                                    <td><?php echo $semaforo['id_semaforo']; ?></td>
+                                    <td><?php echo $semaforo['interseccion_descripcion']; ?></td>
+                                    <td><?php echo $semaforo['posicion_salida']; ?></td>
+                                    <td>
+                                        <span class="badge <?php echo $semaforo['estado_operativo'] == ('Activo'|| 'En Operacion') ? 'bg-success' : 'bg-danger'; ?>">
+                                            <?php echo $semaforo['estado_operativo']; ?>
+                                        </span>
+                                    </td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
                 </div>
             </div>
         </div>
